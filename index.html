@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Spider-Man: City Chase</title>
+<style>
+*{box-sizing:border-box}body{margin:0;overflow:hidden;background:#07111e;color:#fff;font:14px system-ui}canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}#brand{position:absolute;top:12px;left:16px;font-weight:1000;font-size:28px;letter-spacing:2px;text-shadow:0 2px 12px #000}#brand span{color:#ff345c}
+.panel{background:#071321dd;border:1px solid #76dfff66;border-radius:11px;padding:10px 13px;backdrop-filter:blur(7px)}
+#mission{position:absolute;top:55px;left:15px;max-width:300px;line-height:1.5}#stats{position:absolute;bottom:15px;left:15px;width:min(285px,55vw);font-size:12px}
+#bossPanel{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:min(420px,60vw);text-align:center;display:none;font-weight:900;letter-spacing:1px}
+.bar{height:10px;background:#263246;border-radius:20px;overflow:hidden;margin:5px 0 7px}.fill{height:100%;width:100%;background:linear-gradient(90deg,#ff294f,#ff9c48);transition:width .15s}
+#bossFill{background:linear-gradient(90deg,#b51433,#ff6c49)}#help{position:absolute;bottom:15px;right:15px;font-size:11px;line-height:1.8;max-width:270px}
+#msg{position:absolute;top:43%;left:50%;transform:translate(-50%,-50%);width:90%;text-align:center;font-size:clamp(22px,4vw,42px);font-weight:1000;text-shadow:0 3px 20px #000}#sub{font-size:16px;margin-top:9px;font-weight:600}
+#crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:30px;color:#e8fbff;text-shadow:0 0 9px #00bfff}#sense{position:absolute;left:50%;top:21%;transform:translateX(-50%);font-size:28px;color:#ff213d;text-shadow:0 0 18px red;display:none}
+#menu{position:fixed;inset:0;z-index:5;display:grid;place-items:center;background:radial-gradient(ellipse,#244760,#030711)}.card{width:min(680px,92vw);padding:28px;background:#07101ef2;border:1px solid #5bdcff88;border-radius:20px;box-shadow:0 0 90px #008cff22}h1{font-size:clamp(38px,7vw,64px);margin:0;letter-spacing:3px}h1 span{color:#ff345c}p{line-height:1.55;color:#d8e6f3}button{padding:13px 22px;border:0;border-radius:10px;background:linear-gradient(100deg,#ff3158,#ff794f);color:white;font-weight:900;font-size:16px;cursor:pointer}.small{font-size:12px;color:#9eb4c9}kbd{background:#1c2d44;border:1px solid #6686a8;padding:2px 5px;border-radius:4px}
+@media(max-width:650px){#help{display:none}#brand{font-size:22px}#mission{max-width:220px;font-size:12px}#bossPanel{top:58px}}
+
+#cutscene{position:fixed;inset:0;z-index:9;display:none;color:#fff;pointer-events:none;background:radial-gradient(ellipse at center,transparent 38%,#0007 100%)}
+#csTopBar,#csBottomBar{position:absolute;left:0;width:100%;height:8.5%;background:#02040a;box-shadow:0 0 25px #000}
+#csTopBar{top:0}#csBottomBar{bottom:0}
+#csKicker{position:absolute;top:12%;left:50%;transform:translateX(-50%);font-size:clamp(11px,1.3vw,15px);font-weight:1000;letter-spacing:.32em;color:#8beaff;text-shadow:0 2px 12px #000;text-align:center;white-space:nowrap}
+#csDialogue{position:absolute;bottom:11%;left:50%;transform:translateX(-50%);width:min(850px,88vw);padding:16px 22px 18px;background:linear-gradient(100deg,#06101de8,#0a1c2be8);border:1px solid #78dfff77;border-radius:12px;text-align:center;box-shadow:0 12px 45px #0008}
+#csSpeaker{font-size:12px;font-weight:1000;letter-spacing:.22em;color:#ff6b82;margin-bottom:7px}
+#csLine{font-size:clamp(15px,2vw,23px);font-weight:650;line-height:1.4}
+#skipCutscene{position:absolute;top:11%;right:3%;pointer-events:auto;padding:10px 15px;background:#0a182bd9;border:1px solid #84e7ff99;border-radius:8px;font-size:12px;letter-spacing:.08em}
+#cutsceneFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
+#cutsceneFlash.pop{animation:csflash .8s ease-out}
+@keyframes csflash{0%{opacity:0}22%{opacity:.95}100%{opacity:0}}
+@media(max-width:650px){#csDialogue{bottom:11%;padding:12px 14px}#csKicker{top:10%;letter-spacing:.16em}#skipCutscene{top:17%;right:3%;padding:8px 10px}}
+
+</style></head><body>
+<div id="hud"><div id="brand">SPIDER-<span>MAN</span></div><div id="mission" class="panel">LEVEL 1 · ORIGIN<br>Discover your powers.</div>
+<div id="bossPanel" class="panel"><div id="bossName">BOSS</div><div class="bar"><div id="bossFill" class="fill"></div></div><div id="bossNums">300 / 300</div></div>
+<div id="stats" class="panel">SPIDER-MAN · HEALTH <b id="hn">300</b> / 300<div class="bar"><div id="hp" class="fill"></div></div>HEALTH REGEN: starts after 5 seconds without damage<br>WEB ENERGY <b id="wn">100</b><div class="bar"><div id="wp" class="fill" style="background:linear-gradient(90deg,#12c9ff,#a4f7ff)"></div></div>Enemies: <b id="en">0</b></div>
+<div id="msg"></div><div id="crosshair">+</div><div id="sense">⚠ SPIDER-SENSE ⚠</div><div id="glider" style="display:none;position:absolute;top:27%;left:50%;transform:translateX(-50%);font-weight:900;color:#b8f4ff;text-shadow:0 0 12px #00aaff">GLIDER DEPLOYED · G TOGGLE</div>
+<div id="help" class="panel"><b>CONTROLS</b><br><kbd>W A S D</kbd> move · Mouse look · <kbd>Space</kbd> jump / double-tap backflip<br><kbd>Shift</kbd> run / swing boost · <kbd>G</kbd> glider (Level 4+) · <kbd>Left Click</kbd> attack<br><kbd>Hold Right Click</kbd> swing · release to launch · walk into a wall to crawl · <kbd>F</kbd> punch · <kbd>E</kbd> continue</div></div>
+<div id="finish" style="position:fixed;inset:0;z-index:6;display:none;align-items:flex-end;justify-content:center;background:#02081799"><div id="finishCard" style="width:100%;padding:34px 20px 42px;text-align:center;background:linear-gradient(135deg,#0a1930f5,#1e3150f5);border-top:2px solid #6fe8ff;transform:translateY(100%);transition:transform .8s cubic-bezier(.2,.8,.2,1);border-radius:24px 24px 0 0"><h1>SPIDER-MAN SAVED THE CITY!</h1><p style="font-size:20px">YOUR FRIENDLY NEIGHBORHOOD HERO 🕷️❤️</p><button id="retry">RETRY</button></div></div>
+<div id="cutscene" aria-live="polite">
+  <div id="csTopBar"></div><div id="csBottomBar"></div>
+  <div id="csKicker">SPIDER-MAN: CITY CHASE</div>
+  <div id="csDialogue"><div id="csSpeaker">NARRATOR</div><div id="csLine">Every hero has a beginning.</div></div>
+  <button id="skipCutscene">SKIP CUTSCENE »</button>
+  <div id="cutsceneFlash"></div>
+</div>
+
+<div id="menu"><div class="card"><h1>SPIDER-<span>MAN</span></h1><p><b>City Chase — 10-level story update</b></p><p>Swing between buildings, chase Green Goblin to save MJ, fight bandits along the rooftops, then face Green Goblin, Kingpin, Doc Ock and Venom in a four-wave finale.</p><p><b>Tip:</b> Aim at a building and hold right-click to swing from a fixed web point. Hold Shift while swinging for a speed boost. Walk into a wall and keep pressing W to crawl up it. Space jumps off walls; double-tap Space for a higher backflip. Left-click or press F to punch.</p><p class="small">Character style: articulated mannequins with smooth plastic surfaces, blank faces, and visible joints. Internet is needed to load Three.js.</p><button id="start">START GAME</button></div></div>
+<script>
+(function loadThree(){
+ const sources=['https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js','https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js'];
+ function tryLoad(i){if(i>=sources.length){document.getElementById('msg').innerHTML='3D library could not load<div id="sub">Check your internet and refresh.</div>';return}
+ const s=document.createElement('script');s.src=sources[i];s.onload=init;s.onerror=()=>tryLoad(i+1);document.head.appendChild(s)}
+ function init(){if(!window.THREE)return;startGame()}
+ tryLoad(0);
+})();
+function startGame(){
+const $=id=>document.getElementById(id);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x87b6d4);scene.fog=new THREE.FogExp2(0x87b6d4,.0048);
+const camera=new THREE.PerspectiveCamera(68,innerWidth/innerHeight,.1,650);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.0));renderer.shadowMap.enabled=false;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;document.body.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xd8efff,0x344050,2));const sun=new THREE.DirectionalLight(0xffe5c2,3);sun.position.set(-70,130,70);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const mat=(c,r=.7,m=0)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+const mats=[0x526778,0x687d8e,0x3d5063,0x858e98].map(c=>mat(c));const road=mat(0x242c37),side=mat(0x858f99),red=mat(0xd51f40,.48,.12),blue=mat(0x163a6c,.48,.12),dark=mat(0x151c27),white=mat(0xf5f8ff),gold=mat(0xf3b94c,.35,.45);
+// Procedural suit webbing: a small reusable canvas texture adds seams without downloading assets.
+function makeSuitWebTexture(){
+ const c=document.createElement('canvas');c.width=512;c.height=512;const x=c.getContext('2d');
+ x.fillStyle='#f8f8f8';x.fillRect(0,0,512,512);x.strokeStyle='rgba(20,27,38,.58)';x.lineWidth=2;
+ for(let y=-64;y<=576;y+=48){x.beginPath();x.moveTo(0,y);x.lineTo(512,y);x.stroke()}
+ for(let x0=-64;x0<=576;x0+=48){x.beginPath();x.moveTo(x0,0);x.lineTo(x0,512);x.stroke()}
+ for(let gx=0;gx<=512;gx+=96)for(let gy=0;gy<=512;gy+=96){
+  x.beginPath();x.arc(gx,gy,34,0,Math.PI*2);x.stroke();
+  x.beginPath();x.arc(gx,gy,22,0,Math.PI*2);x.stroke();
+ }
+ const tex=new THREE.CanvasTexture(c);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(2.6,2.2);tex.anisotropy=4;return tex;
+}
+red.map=makeSuitWebTexture();red.needsUpdate=true;
+const facadeTrim=mat(0x8a9cae,.55,.15),roofEquipment=mat(0x283847,.75,.15),streetMetal=mat(0x263341,.45,.65),lampMat=mat(0xffe0a3,.25,.1);lampMat.emissive=new THREE.Color(0xffbb63);lampMat.emissiveIntensity=.85;
+function mesh(geo,m,parent=scene){const o=new THREE.Mesh(geo,m);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o}
+const mannequinJointGeometry=new THREE.SphereGeometry(1,14,10);
+function mannequinJoint(parent,material,x,y,z,sx=.14,sy=sx,sz=sx){const j=mesh(mannequinJointGeometry,material,parent);j.position.set(x,y,z);j.scale.set(sx,sy,sz);return j}
+function box(w,h,d,m,x,y,z){const o=mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);return o}
+box(1500,1,1500,road,0,-.7,0);
+const buildings=[],anchors=[];
+for(let x=-270;x<=270;x+=42)for(let z=-270;z<=270;z+=42){if(Math.abs(x)<20&&Math.abs(z)<20)continue;let h=22+Math.random()*48+(Math.random()<.12?22:0),w=17+Math.random()*5,d=17+Math.random()*5,b=box(w,h,d,mats[Math.floor(Math.random()*mats.length)],x,h/2-.2,z);b.userData={x,z,w,d,h,building:true};buildings.push(b);anchors.push(new THREE.Vector3(x,h,z));
+ // Rooftop parapets and HVAC boxes break up the repetitive block silhouettes.
+ if(Math.random()<.48){box(w+.34,.24,d+.34,facadeTrim,x,h-.14,z);}
+ if(Math.random()<.36){let rw=2.2+Math.random()*2.8,rd=2+Math.random()*2.4;box(rw,.9,rd,roofEquipment,x+(Math.random()-.5)*w*.35,h+.25,z+(Math.random()-.5)*d*.35);}
+ if(Math.random()<.22){let antenna=mesh(new THREE.CylinderGeometry(.035,.07,2.2,6),streetMetal);antenna.position.set(x+(Math.random()-.5)*w*.5,h+.95,z+(Math.random()-.5)*d*.5);}
+ let win=mat(0x7ccbe9,.25,.2);win.emissive=new THREE.Color(0x17425b);win.emissiveIntensity=.5;for(let y=6;y<h-2;y+=9)for(let xx=-w/2+3;xx<w/2-1;xx+=6)if(Math.random()>.45){let ww=mesh(new THREE.BoxGeometry(1.4,1.4,.07),Math.random()<.15?gold:win);ww.position.set(x+xx,y,z+d/2+.06);ww.castShadow=false}}
+const lineMat=mat(0xe6dba4);
+for(let i=-420;i<=420;i+=48){box(.13,.03,840,lineMat,i,-.16,0);box(840,.03,.13,lineMat,0,-.16,i)}
+// Street lamps and intersection light pools make the city feel less like bare test geometry.
+for(let lx=-210;lx<=210;lx+=84)for(let lz=-210;lz<=210;lz+=84){
+ const pole=mesh(new THREE.CylinderGeometry(.075,.12,5.4,7),streetMetal);pole.position.set(lx+18,2.7,lz+18);
+ const arm=mesh(new THREE.CylinderGeometry(.055,.07,1.15,6),streetMetal);arm.position.set(lx+18.48,5.15,lz+18);arm.rotation.z=-Math.PI/2;
+ const bulb=mesh(new THREE.SphereGeometry(.18,8,6),lampMat);bulb.position.set(lx+19.0,5.05,lz+18);
+}
+// Crosswalk markings around the starting plaza.
+for(let i=-4;i<=4;i++){box(1.1,.025,5.5,white,i*1.6,-.145,15);box(1.1,.025,5.5,white,i*1.6,-.145,-15);} 
+
+// Player character: articulated mannequin body with smooth plastic-like surfaces.
+const player=new THREE.Group();scene.add(player);
+const civilianTop=mat(0x43516b,.38,.04),civilianBottom=mat(0x202a39,.42,.04),skinMat=mat(0xc99775,.36,.03),hairMat=mat(0x201a20,.48,.03);
+const torso=mesh(new THREE.CapsuleGeometry(.48,.92,8,16),red,player);torso.position.y=2.15;
+const pelvis=mesh(new THREE.CapsuleGeometry(.37,.26,6,12),blue,player);pelvis.scale.set(1.06,1,0.78);pelvis.position.y=1.45;
+const neck=mesh(new THREE.CylinderGeometry(.13,.16,.24,14),red,player);neck.position.y=2.63;
+const head=mesh(new THREE.SphereGeometry(.39,24,18),red,player);head.scale.set(1,.99,.94);head.position.set(0,3.05,0);
+const hairCap=mesh(new THREE.SphereGeometry(.34,16,12),hairMat,player);hairCap.scale.set(1.03,.58,1.02);hairCap.position.set(0,3.31,-.035);hairCap.visible=false;
+const eyeMeshes=[],arms=[],legs=[],feet=[],playerJoints=[];
+function addPlayerJoint(radius,suitMaterial,civilianMaterial,x,y,z,sx=radius,sy=radius,sz=radius){const joint=mannequinJoint(player,suitMaterial,x,y,z,sx,sy,sz);playerJoints.push({joint,suitMaterial,civilianMaterial});return joint}
+for(const sideSign of [-1,1]){
+  let eye=mesh(new THREE.SphereGeometry(.13,16,12),white,player);eye.scale.set(.75,1.25,.35);eye.position.set(sideSign*.17,3.1,.34);eye.rotation.z=-sideSign*.25;eyeMeshes.push(eye);
+  let arm=mesh(new THREE.CapsuleGeometry(.16,.74,6,12),red,player);arm.position.set(sideSign*.62,2.15,0);arm.rotation.z=-sideSign*.12;arms.push(arm);
+  let leg=mesh(new THREE.CapsuleGeometry(.2,.8,6,12),blue,player);leg.position.set(sideSign*.24,.76,0);legs.push(leg);
+  // Rounded shoulder, elbow, wrist, hip, knee, and ankle joints create the mannequin silhouette.
+  addPlayerJoint(.17,red,civilianTop,sideSign*.53,2.49,0,.17,.18,.17);
+  addPlayerJoint(.125,red,civilianTop,sideSign*.64,2.10,0,.13,.13,.13);
+  addPlayerJoint(.105,red,civilianTop,sideSign*.63,1.72,.015,.11,.11,.11);
+  addPlayerJoint(.145,blue,civilianBottom,sideSign*.235,1.27,0,.15,.14,.15);
+  addPlayerJoint(.13,blue,civilianBottom,sideSign*.24,.51,0,.14,.13,.14);
+  addPlayerJoint(.095,blue,civilianBottom,sideSign*.24,.18,0,.105,.10,.11);
+  const foot=mesh(new THREE.CapsuleGeometry(.105,.22,4,8),blue,player);foot.rotation.x=Math.PI/2;foot.position.set(sideSign*.24,.105,.13);feet.push(foot);
+}
+let emblem=mesh(new THREE.SphereGeometry(.1,12,8),dark,player);emblem.scale.set(.5,1.8,.3);emblem.position.set(0,2.25,.46);emblem.visible=false;
+const spiderLogo=new THREE.Group();player.add(spiderLogo);const logoMat=mat(0xdce7ef,.31,.22);
+const logoBody=mesh(new THREE.CapsuleGeometry(.055,.34,4,7),logoMat,spiderLogo);logoBody.position.set(0,2.28,.49);
+for(const sideSign of [-1,1])for(let i=0;i<3;i++){
+ const legPiece=mesh(new THREE.CapsuleGeometry(.025,.24,3,5),logoMat,spiderLogo);
+ legPiece.position.set(sideSign*(.10+i*.035),2.34-i*.16,.49);legPiece.rotation.z=sideSign*(.65+i*.12);
+}
+function setMaskMode(masked){
+  head.material=masked?red:skinMat;
+  hairCap.visible=!masked;
+  for(const eye of eyeMeshes)eye.visible=masked;
+}
+function setSuitMode(suited){
+  torso.material=suited?red:civilianTop;pelvis.material=suited?blue:civilianBottom;neck.material=suited?red:skinMat;
+  emblem.visible=false;spiderLogo.visible=suited;
+  for(const arm of arms)arm.material=suited?red:civilianTop;
+  for(const leg of legs)leg.material=suited?blue:civilianBottom;
+  for(const foot of feet)foot.material=suited?blue:civilianBottom;
+  for(const part of playerJoints)part.joint.material=suited?part.suitMaterial:part.civilianMaterial;
+  setMaskMode(suited);
+}
+setSuitMode(true);
+const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2(0,0),keys={},enemies=[],bombs=[];let yaw=0,pitch=-.1,started=false,locked=false,level=1,stage=0,wave=0,health=300,energy=100,vy=0,ground=true,invuln=0,webLine=null,webTarget=null,zip=false,boss=null,missionTimer=0,greenGoblin=null,mj=null,day=1,lastSense=0,attackCooldown=0,storyReady=false,gliding=false,damageQuiet=0,voiceEnabled=false,webHeld=false,swingAttached=false,webAnchor=null,webAnchorBuilding=null,selectedBuilding=null,ropeLength=0,swingReleaseTimer=0;
+const clock=new THREE.Clock(),vel=new THREE.Vector3();
+let introActive=false,endingActive=false,cutsceneData=null,csLastLine='',cutsceneVoiceEnabled=true,mjCutsceneActor=null,endingRoof=null;
+let wallClimbing=false,wallBuilding=null,wallNormal=null,wallMoveAmount=0;
+let lastSpaceTap=0,doubleJumpUsed=false,backflipTime=0,gaitTime=0,punchAnim=0,punchSide=0,attackSide=0,walkBob=0;
+let crowdGroup=null,crowdActors=[],gwenActor=null,jonahActor=null,micProp=null,venomThrowImpactTimer=0,senseFlashTimer=0,privatePlaceProps=[];
+function say(a,b='',t=3.2){$('msg').innerHTML=a+(b?'<div id="sub">'+b+'</div>':'');say.time=t;
+if(voiceEnabled&&('speechSynthesis' in window)){try{speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance((a+' . '+b).replace(/<[^>]*>/g,''));utter.rate=.98;utter.pitch=.95;utter.volume=.85;speechSynthesis.speak(utter)}catch(e){}}
+}
+function clearEnemies(){for(const e of [...enemies])removeEnemy(e);boss=null;greenGoblin=null}
+function makePerson(type,x,z,hp){
+ const g=new THREE.Group();scene.add(g);g.position.set(x,0,z);
+ let bodyMat=mat(type==='greenGoblin'?0x43834b:type==='kingpin'?0x282d39:type==='docock'?0x8b3e29:type==='venom'?0x10141a:0x343b49,.34,.07);
+ let skin=mat(type==='greenGoblin'?0x65a957:type==='venom'?0x1b1d25:0xc9a080,.35,.03);
+ let big=['kingpin','docock','venom'].includes(type);
+ // Smooth display-mannequin torsos for human-sized male characters; the larger bosses keep their oversized silhouettes.
+ const maleTorsoProfile=[[.17,.56],[.22,.68],[.29,.84],[.26,1.02],[.23,1.18],[.27,1.34],[.34,1.50],[.31,1.62],[.18,1.79],[.12,1.88]].map(([r,y])=>new THREE.Vector2(r,y));
+ const body=mesh(big?new THREE.CapsuleGeometry(.62,1.05,8,14):new THREE.LatheGeometry(maleTorsoProfile,20),bodyMat,g);
+ if(big)body.position.y=1.6;
+ const head=mesh(new THREE.SphereGeometry(big?.4:.29,18,14),skin,g);head.position.y=big?2.55:2.1;
+ const neck=mesh(new THREE.CylinderGeometry(big?.15:.11,big?.18:.13,big?.25:.20,12),skin,g);neck.position.y=big?2.20:1.98;
+ const enemyArms=[],enemyLegs=[],docTentacleLines=[],mannequinJoints=[];
+ function addEnemyJoint(material,x,y,z,sx,sy=sx,sz=sx){const j=mannequinJoint(g,material,x,y,z,sx,sy,sz);mannequinJoints.push(j);return j}
+ for(let sideSign of [-1,1]){
+  const arm=mesh(new THREE.CapsuleGeometry(big?.18:.15,big?.78:.65,6,10),bodyMat,g);
+  arm.position.set(sideSign*(big?.58:.43),big?1.65:1.45,0);enemyArms.push(arm);
+  const leg=mesh(new THREE.CapsuleGeometry(big?.18:.16,big?.66:.58,6,10),dark,g);
+  leg.position.set(sideSign*.22,.45,0);enemyLegs.push(leg);
+  addEnemyJoint(bodyMat,sideSign*(big?.54:.40),big?2.00:1.78,0,big?.20:.15,big?.18:.15,big?.16:.14);
+  addEnemyJoint(bodyMat,sideSign*(big?.60:.44),big?1.48:1.34,.005,big?.15:.115,big?.15:.115,big?.14:.11);
+  addEnemyJoint(bodyMat,sideSign*(big?.59:.43),big?1.15:1.02,.02,big?.125:.095,big?.13:.10,big?.12:.095);
+  addEnemyJoint(bodyMat,sideSign*.22,big?1.08:.87,0,big?.17:.12,big?.15:.12,big?.16:.12);
+  addEnemyJoint(dark,sideSign*.22,.47,0,big?.15:.11,big?.14:.105,big?.14:.11);
+  addEnemyJoint(dark,sideSign*.22,.12,.02,big?.115:.085,big?.10:.08,big?.13:.095);
+  const foot=mesh(new THREE.CapsuleGeometry(big?.12:.085,big?.20:.15,4,7),dark,g);foot.rotation.x=Math.PI/2;foot.position.set(sideSign*.22,.08,.10);
+ }
+ if(type==='greenGoblin'){
+  let hood=mesh(new THREE.ConeGeometry(.43,.75,8),mat(0x285c37,.38,.04),g);hood.position.y=2.85;hood.rotation.z=Math.PI;
+  for(let sideSign of [-1,1]){let ear=mesh(new THREE.ConeGeometry(.12,.4,5),bodyMat,g);ear.position.set(sideSign*.38,2.38,0);ear.rotation.z=sideSign*.8}
+ }
+ if(type==='kingpin'){let tie=mesh(new THREE.BoxGeometry(.14,.52,.08),mat(0xb91e39,.4,.03),g);tie.position.set(0,1.85,.36)}
+ if(type==='docock'){
+  for(let i=0;i<4;i++){let a=mesh(new THREE.CapsuleGeometry(.10,1.05,4,7),mat(0xb76a35,.27,.65),g);a.position.set((i-1.5)*.38,1.65,-.3);a.rotation.z=(i-1.5)*.3;const tip=mesh(new THREE.SphereGeometry(.16,8,6),mat(0xf3b94c,.3,.5),g);tip.position.set((i-1.5)*.62,2.1,-.4)}
+  for(let i=0;i<4;i++){const ln=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xaeb8c4,transparent:true,opacity:.95}));ln.visible=false;scene.add(ln);docTentacleLines.push(ln)}
+ }
+ if(type==='venom'){
+  body.material=mat(0x06080b,.23,.25);skin.color.set(0x11161c);skin.roughness=.27;skin.metalness=.08;
+  body.scale.set(1.22,1.08,1.1);
+  const eyeMat=mat(0xf4f6f8,.2,.04);
+  for(const sx of [-1,1]){const eye=mesh(new THREE.SphereGeometry(.17,12,8),eyeMat,g);eye.scale.set(.95,.5,.28);eye.position.set(sx*.20,2.64,.29);eye.rotation.z=-sx*.28;}
+  const mouth=mesh(new THREE.BoxGeometry(.55,.24,.12),mat(0x290b12,.31,.02),g);mouth.position.set(0,2.32,.34);
+  for(let i=0;i<6;i++){const tooth=mesh(new THREE.ConeGeometry(.055,.17,4),mat(0xf5f6f7,.25,.02),g);tooth.position.set(-.23+i*.092,2.34,.42);tooth.rotation.x=Math.PI;}
+  for(let i=0;i<5;i++){const tooth=mesh(new THREE.ConeGeometry(.05,.14,4),mat(0xf5f6f7,.25,.02),g);tooth.position.set(-.19+i*.095,2.22,.42);}
+  for(let i=0;i<5;i++){const tendril=mesh(new THREE.CapsuleGeometry(.075,.75+Math.random()*.55,4,6),mat(0x10161d,.26,.12),g);tendril.position.set((i-2)*.23,1.75,-.48);tendril.rotation.z=(i-2)*.32;tendril.rotation.x=-.3;}
+ }
+ if(type==='bandit'){let weapon=mesh(new THREE.BoxGeometry(.4,.12,.14),dark,g);weapon.position.set(.55,1.45,.2)}
+ if(type==='venom')g.scale.setScalar(2.05);
+ g.userData={type,hp,maxHp:hp,speed:type==='kingpin'?2.4:type==='venom'?2.7:type==='bandit'?4.1:2.7,cd:2,attackClock:0,alive:true,arms:enemyArms,legs:enemyLegs,gait:Math.random()*6.28,docTentacleLines,docAttackTimer:type==='docock'?15:0,docAttack:null,venomFightTime:0,venomThrow:null,mannequinJoints};
+ enemies.push(g);return g;
+}
+function removeEnemy(e){scene.remove(e);const i=enemies.indexOf(e);if(i>=0)enemies.splice(i,1);if(e.userData&&e.userData.docTentacleLines)for(const ln of e.userData.docTentacleLines){scene.remove(ln);ln.geometry.dispose();ln.material.dispose()}if(e===boss)boss=null;if(e===greenGoblin)greenGoblin=null}
+function spawnBandits(n=4){for(let i=0;i<n;i++){let a=Math.random()*Math.PI*2,r=16+Math.random()*9;makePerson('bandit',player.position.x+Math.cos(a)*r,player.position.z+Math.sin(a)*r,60)}}
+function setBoss(e,name){boss=e;$('bossPanel').style.display='block';$('bossName').textContent=name.toUpperCase();updateBossBar()}
+function updateBossBar(){if(!boss){$('bossPanel').style.display='none';return}let u=boss.userData;$('bossFill').style.width=Math.max(0,u.hp/u.maxHp*100)+'%';$('bossNums').textContent=Math.max(0,Math.ceil(u.hp))+' / '+u.maxHp}
+function startBossWave(type){const stats={greenGoblin:{hp:300,name:'Green Goblin'},kingpin:{hp:400,name:'Kingpin'},docock:{hp:400,name:'Doctor Octopus'},venom:{hp:600,name:'Venom'}}[type];let e=makePerson(type,player.position.x+2,player.position.z-13,stats.hp);setBoss(e,stats.name);say('WAVE '+wave+': '+stats.name.toUpperCase(),stats.name+' has entered the arena!',2.5);if(type==='greenGoblin')greenGoblin=e}
+function regen(){health=300;invuln=1;damageQuiet=0}
+function showFinish(){ $('finish').style.display='flex';requestAnimationFrame(()=>{$('finishCard').style.transform='translateY(0)'}) }
+function retryGame(){location.reload()}
+function csShow(){ $('cutscene').style.display='block'; $('hud').style.visibility='hidden'; if(document.pointerLockElement&&document.exitPointerLock)document.exitPointerLock(); }
+function csHide(){ $('cutscene').style.display='none'; $('hud').style.visibility='visible'; if('speechSynthesis' in window){try{speechSynthesis.cancel()}catch(e){}} }
+function csLine(key,kicker,speaker,line){
+  if(csLastLine===key)return;
+  csLastLine=key;
+  const activeData=cutsceneData;
+  let voiceToken=null;
+  if(activeData){
+    if(activeData.dialogueFallbackTimer)clearTimeout(activeData.dialogueFallbackTimer);
+    activeData.voiceToken=(activeData.voiceToken||0)+1;
+    voiceToken=activeData.voiceToken;
+    activeData.dialogueDone=false;
+    activeData.dialogueFinishedAt=0;
+  }
+  $('csKicker').textContent=kicker;
+  $('csSpeaker').textContent=speaker;
+  $('csLine').textContent=line;
+  const markDialogueDone=()=>{
+    if(!cutsceneData||voiceToken===null||cutsceneData.voiceToken!==voiceToken)return;
+    if(cutsceneData.dialogueDone)return;
+    cutsceneData.dialogueDone=true;
+    if(cutsceneData.dialogueFallbackTimer){clearTimeout(cutsceneData.dialogueFallbackTimer);cutsceneData.dialogueFallbackTimer=null;}
+    cutsceneData.dialogueFinishedAt=cutsceneData.endStageTime||cutsceneData.time||0;
+  };
+  if(activeData){
+    const wordCount=(line.trim().match(/\S+/g)||[]).length;
+    // Fallback makes the cutscene continue if the browser has no speech voice or TTS fails.
+    activeData.dialogueFallbackTimer=setTimeout(markDialogueDone,Math.max(9000,wordCount*760+2500));
+  }
+  if(cutsceneVoiceEnabled&&('speechSynthesis' in window)){
+    try{
+      speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance((speaker==='NARRATOR'||speaker==='100 FANS'?'':speaker+'. ')+line);
+      u.rate=.94;
+      u.pitch=speaker==='GWEN STACY'?1.08:(speaker==='J. JONAH JAMESON'?.82:.96);
+      u.volume=.9;
+      u.onend=markDialogueDone;
+      u.onerror=markDialogueDone;
+      speechSynthesis.speak(u);
+    }catch(e){markDialogueDone()}
+  }else{
+    // Voice is optional; subtitles still remain synchronized using the fallback above.
+    if(!activeData) return;
+  }
+}
+function approach(a,b,p){return a+(b-a)*Math.max(0,Math.min(1,p))}
+function smooth(p){p=Math.max(0,Math.min(1,p));return p*p*(3-2*p)}
+function camShot(pos,target,dt){camera.position.lerp(pos,1-Math.exp(-dt*3.1));camera.lookAt(target)}
+function createSpider(){
+  const g=new THREE.Group();
+  const spiderBody=mesh(new THREE.SphereGeometry(.17,10,8),mat(0x111820,.5,.1),g);spiderBody.scale.set(1, .72,1.35);
+  const spiderHead=mesh(new THREE.SphereGeometry(.105,8,6),mat(0x090d12,.45),g);spiderHead.position.z=.2;
+  const legMat=mat(0x0a1017,.55,.1);
+  for(const sx of [-1,1])for(let i=0;i<4;i++){
+    const leg=mesh(new THREE.CylinderGeometry(.018,.03,.34,5),legMat,g);
+    leg.position.set(sx*.19,.005,(i-1.5)*.11);
+    leg.rotation.z=sx*.85;leg.rotation.x=(i-1.5)*.3;
+  }
+  g.scale.setScalar(.75);g.visible=false;scene.add(g);return g;
+}
+const biteSpider=createSpider();
+function introSetup(){
+  introActive=true;endingActive=false;started=true;cutsceneData={time:0};csLastLine='';wallClimbing=false;wallBuilding=null;wallNormal=null;swingAttached=false;webHeld=false;csShow();
+  clearEnemies();setSuitMode(false);player.position.set(0,0,0);player.rotation.set(0,0,0);player.scale.setScalar(1);vel.set(0,0,0);yaw=0;pitch=-.1;
+  biteSpider.visible=true;biteSpider.position.set(-1.3,1.1,1.2);
+  if(webLine)webLine.visible=false;zip=false;gliding=false;
+  const first=buildings.find(b=>b.userData.x===42&&b.userData.z===0)||buildings.find(b=>b.userData.x===42)||buildings[0];
+  const u=first.userData;cutsceneData.wall=first;cutsceneData.wallX=u.x-u.w/2-.8;cutsceneData.wallZ=u.z;cutsceneData.roofY=u.h-.2;
+  camera.position.set(3,4.3,7);camera.lookAt(0,2,0);
+  csLine('intro-bite','THE BEGINNING','NARRATOR','Peter Parker was just an ordinary person — until one tiny spider changed everything.');
+}
+function finishIntro(){
+  if(!introActive)return;introActive=false;biteSpider.visible=false;if(webLine)webLine.visible=false;zip=false;setSuitMode(true);
+  player.position.set(0,0,0);player.rotation.set(0,0,0);vel.set(0,0,0);yaw=0;pitch=-.1;csHide();startLevel(1);
+}
+function skipCutscene(){
+  if(introActive){finishIntro();return}
+  if(endingActive){finishEnding();return}
+}
+function updateIntro(dt){
+  if(!cutsceneData)return;cutsceneData.time+=dt;const t=cutsceneData.time;const w=cutsceneData.wallX,z0=cutsceneData.wallZ,roofY=cutsceneData.roofY;
+  if(t<4){
+    csLine('intro-bite','THE BEGINNING','NARRATOR','Peter Parker was just an ordinary person — until one tiny spider changed everything.');
+    player.position.set(0,0,0);player.rotation.y=0;
+    const p=smooth(t/3.7);biteSpider.position.set(approach(-1.3,.43,p),approach(1.0,2.52,p),approach(1.2,.22,p));
+    camShot(new THREE.Vector3(3.3,3.8,5.4),new THREE.Vector3(0,2.35,.1),dt);
+  }else if(t<7){
+    csLine('intro-react','THE SPIDER BITE','PETER PARKER','Ow! What was that?');
+    biteSpider.position.set(.35,approach(2.4,.25,(t-4)/2.5),.4);player.rotation.z=Math.sin(t*14)*.06;
+    arms[0].rotation.z=-.7-Math.sin(t*10)*.15;arms[1].rotation.z=.65+Math.sin(t*10)*.15;
+    camShot(new THREE.Vector3(2.5,3.5,4.5),new THREE.Vector3(0,2.4,0),dt);
+  }else if(t<11){
+    csLine('intro-test','SOMETHING IS DIFFERENT','NARRATOR','The next morning, Peter discovers he can cling to walls.');
+    player.rotation.z=0;arms[0].rotation.z=-.12;arms[1].rotation.z=.12;
+    const p=smooth((t-7)/4);player.position.set(approach(0,w,p),0,approach(0,z0,p));player.rotation.y=Math.PI/2;
+    camShot(new THREE.Vector3(player.position.x-5,3.4,player.position.z+7),new THREE.Vector3(player.position.x,2.0,player.position.z),dt);
+  }else if(t<16){
+    csLine('intro-climb','THE WALL-CRAWLER','PETER PARKER','No way... I can actually stick to the wall!');
+    const p=smooth((t-11)/5);player.position.set(w,approach(0,roofY,p),z0);player.rotation.y=Math.PI/2;
+    arms[0].rotation.z=-.8+Math.sin(t*5)*.12;arms[1].rotation.z=.8-Math.sin(t*5)*.12;
+    camShot(new THREE.Vector3(w-6,approach(4,roofY*.58,p),z0+9),new THREE.Vector3(w,Math.max(2,player.position.y),z0),dt);
+  }else if(t<19){
+    csLine('intro-roof','ABOVE THE CITY','NARRATOR','From the rooftops, the whole city feels different.');
+    const p=smooth((t-16)/1.2);player.position.set(approach(w,cutsceneData.wall.userData.x,p),roofY,z0);player.rotation.y=Math.PI/2;
+    camShot(new THREE.Vector3(player.position.x+10,roofY+6,player.position.z+14),new THREE.Vector3(player.position.x,roofY+2,player.position.z),dt);
+  }else if(t<23){
+    csLine('intro-zip','FIRST WEB ZIP','PETER PARKER','Okay... let’s try this!');
+    if(!webLine){webLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xe8fbff}));scene.add(webLine)}
+    webLine.visible=true;zip=true;if(!webTarget)webTarget=new THREE.Vector3();webTarget.set(0,2,0);
+    const p=smooth((t-19)/4);player.position.set(approach(cutsceneData.wall.userData.x,0,p),approach(roofY,0,p)+Math.sin(p*Math.PI)*13,approach(z0,0,p));
+    player.rotation.y=approach(Math.PI/2,0,p);webLine.geometry.setFromPoints([player.position.clone().add(new THREE.Vector3(0,2.4,0)),new THREE.Vector3(0,2,0)]);
+    camShot(new THREE.Vector3(player.position.x+7,player.position.y+7,player.position.z+10),new THREE.Vector3(player.position.x,player.position.y+1.5,player.position.z),dt);
+  }else if(t<25.4){
+    csLine('intro-suit','BACK AT SPAWN','NARRATOR','Peter returns to where it all began. Now he needs a suit.');
+    player.position.set(0,0,0);player.rotation.set(0,approach(0,Math.PI*2,(t-23)/2.4),0);zip=false;if(webLine)webLine.visible=false;
+    camShot(new THREE.Vector3(4.5,3.7,6.5),new THREE.Vector3(0,2,0),dt);
+  }else if(t<28){
+    csLine('intro-transform','A NEW HERO IS BORN','NARRATOR','A new suit. A new purpose. Spider-Man is born!');
+    player.position.set(0,0,0);player.rotation.set(0,approach(0,Math.PI*2,(t-25.4)/2.6),0);setSuitMode(true);
+    if(!cutsceneData.flashDone&&t>=25.45){cutsceneData.flashDone=true;$('cutsceneFlash').classList.remove('pop');void $('cutsceneFlash').offsetWidth;$('cutsceneFlash').classList.add('pop')}
+    camShot(new THREE.Vector3(5.5,3.5,6.5),new THREE.Vector3(0,1.8,0),dt);
+  }else if(t<30){
+    csLine('intro-title','SPIDER-MAN: CITY CHASE','NARRATOR','Your city. Your responsibility. Your story starts now.');
+    player.position.set(0,0,0);player.rotation.y=0;setSuitMode(true);
+    camShot(new THREE.Vector3(0,4.0,8.5),new THREE.Vector3(0,1.8,0),dt);
+  }else{finishIntro()}
+}
+function createMJ(){
+ const g=new THREE.Group();
+ const outfit=mat(0x356f56,.42,.04),skirt=mat(0x8a3248,.43,.03),skin=mat(0xe3b398,.34,.025),hair=mat(0xb72e35,.47,.03),shoe=mat(0x25242d,.35,.04);
+ const body=mesh(new THREE.CapsuleGeometry(.34,.7,7,12),outfit,g);body.position.y=1.42;
+ const waist=mesh(new THREE.CapsuleGeometry(.27,.18,5,10),skirt,g);waist.scale.set(1.05,1,.78);waist.position.y=.92;
+ const neck=mesh(new THREE.CylinderGeometry(.105,.13,.19,12),skin,g);neck.position.y=1.99;
+ const headMJ=mesh(new THREE.SphereGeometry(.3,18,14),skin,g);headMJ.position.set(0,2.27,.03);
+ const hairBack=mesh(new THREE.SphereGeometry(.34,16,12),hair,g);hairBack.scale.set(1.04,1.14,.95);hairBack.position.set(0,2.33,-.065);
+ const fringe=mesh(new THREE.SphereGeometry(.23,12,8),hair,g);fringe.scale.set(1.1,.48,.65);fringe.position.set(0,2.48,.22);
+ // Featureless face gives MJ the smooth display-mannequin look.
+ const armsMJ=[],legsMJ=[],jointsMJ=[];
+ for(const sx of [-1,1]){
+  const arm=mesh(new THREE.CapsuleGeometry(.11,.56,5,9),skin,g);arm.position.set(sx*.42,1.52,0);armsMJ.push(arm);
+  const leg=mesh(new THREE.CapsuleGeometry(.13,.54,5,9),shoe,g);leg.position.set(sx*.16,.42,0);legsMJ.push(leg);
+  jointsMJ.push(mannequinJoint(g,outfit,sx*.37,1.73,0,.13,.13,.13));
+  jointsMJ.push(mannequinJoint(g,skin,sx*.43,1.50,0,.085,.085,.085));
+  jointsMJ.push(mannequinJoint(g,skin,sx*.42,1.25,.015,.075,.075,.075));
+  jointsMJ.push(mannequinJoint(g,skirt,sx*.16,.73,0,.13,.13,.12));
+  jointsMJ.push(mannequinJoint(g,shoe,sx*.16,.42,0,.105,.11,.105));
+  const hand=mesh(new THREE.SphereGeometry(.085,10,8),skin,g);hand.position.set(sx*.43,1.22,.02);
+ }
+ g.userData={arms:armsMJ,legs:legsMJ,head:headMJ,body,joints:jointsMJ};scene.add(g);return g;
+}
+function makeCrowdPerson(x,z,scale,color,seed){
+ const g=new THREE.Group();
+ const isGwen=seed===110, isJonah=seed===111;
+ const isFemale=isGwen||(!isJonah&&seed%4===2);
+ const shirt=mat(color,.43,.035),pants=mat(seed%3===0?0x202b3b:seed%3===1?0x363137:0x343d40,.46,.035),skin=mat(seed%4===0?0x9d6a4d:seed%4===1?0xd9ad8e:0xb98064,.35,.025);
+ // Lathed torsos give the crowd smooth mannequin anatomy instead of a single capsule.
+ // Female silhouettes use a narrower waist with softly rounded chest and hip transitions.
+ const maleProfile=[[.16,.72],[.20,.80],[.215,.94],[.18,1.08],[.20,1.24],[.245,1.39],[.29,1.52],[.265,1.63],[.15,1.74],[.10,1.78]];
+ const femaleProfile=[[.155,.72],[.205,.78],[.235,.89],[.22,.99],[.165,1.12],[.16,1.24],[.195,1.37],[.235,1.49],[.22,1.59],[.17,1.68],[.125,1.76],[.10,1.78]];
+ const profile=(isFemale?femaleProfile:maleProfile).map(([r,y])=>new THREE.Vector2(r,y));
+ const body=mesh(new THREE.LatheGeometry(profile,20),shirt,g);
+ const hip=mesh(new THREE.SphereGeometry(.205,16,12),pants,g);
+ hip.scale.set(isFemale?1.18:1,.62,.82);hip.position.set(0,.82,0);
+ const neck=mesh(new THREE.CylinderGeometry(.07,.09,.13,10),skin,g);neck.position.y=1.67;
+ const head=mesh(new THREE.SphereGeometry(.20,16,12),skin,g);head.position.y=1.93;
+ const hairColor=isGwen?0xf0cf72:(isJonah?0x262328:(seed%2?0x211b1b:0x49342b));
+ const hairMaterial=mat(hairColor,.42,.025);
+ const haircap=mesh(new THREE.SphereGeometry(.205,14,10),hairMaterial,g);haircap.scale.set(1,.55,1);haircap.position.set(0,2.05,-.015);
+ if(isGwen){
+  // Gwen's blonde bob and side locks, still in a smooth stylized mannequin style.
+  const hairBack=mesh(new THREE.SphereGeometry(.205,14,10),hairMaterial,g);hairBack.scale.set(1.06,1.05,.78);hairBack.position.set(0,1.94,-.095);
+  for(const sx of [-1,1]){
+   const lock=mesh(new THREE.CapsuleGeometry(.052,.22,5,8),hairMaterial,g);
+   lock.position.set(sx*.168,1.82,-.005);lock.rotation.z=-sx*.08;
+  }
+ }
+ const armsC=[],legsC=[],mannequinJoints=[];
+ for(const sx of [-1,1]){
+  const arm=mesh(new THREE.CapsuleGeometry(isFemale?.069:.075,isFemale?.40:.42,5,8),shirt,g);arm.position.set(sx*(isFemale?.285:.30),1.27,0);armsC.push(arm);
+  const leg=mesh(new THREE.CapsuleGeometry(isFemale?.079:.085,.42,5,8),pants,g);leg.position.set(sx*(isFemale?.125:.12),.48,0);legsC.push(leg);
+  mannequinJoints.push(mannequinJoint(g,shirt,sx*(isFemale?.275:.29),1.48,0,.09,.09,.09));
+  mannequinJoints.push(mannequinJoint(g,skin,sx*(isFemale?.285:.30),1.22,.01,.065,.065,.065));
+  mannequinJoints.push(mannequinJoint(g,pants,sx*(isFemale?.125:.12),.48,0,.075,.08,.075));
+ }
+ g.position.set(x,0,z);g.scale.setScalar(scale);g.rotation.y=Math.PI;
+ g.userData={arms:armsC,legs:legsC,joints:mannequinJoints,seed,isFemale,isGwen,gait:Math.random()*6.28,cheer:Math.random()*6.28};crowdGroup.add(g);return g;
+}
+function createCrowdScene(){
+ if(crowdGroup){scene.remove(crowdGroup)}
+ crowdGroup=new THREE.Group();scene.add(crowdGroup);crowdActors=[];
+ const colors=[0x35658a,0x8d3246,0x4f8059,0xb18b43,0x654d8b,0x557b83,0x9b573a,0x424f60];let idx=0;
+ // Ten rows of ten spectators: 100 cheering people around the post-battle stage.
+ for(let row=0;row<10;row++)for(let col=0;col<10;col++){
+  const x=(col-4.5)*2.45+(row%2)*.35,z=7.2+row*1.65;
+  const actor=makeCrowdPerson(x,z,.72+Math.random()*.12,colors[idx%colors.length],idx++);
+  actor.userData.leaveStart=actor.position.clone();
+  crowdActors.push(actor);
+ }
+ gwenActor=makeCrowdPerson(-2.6,4.5,.95,0x356d88,110);
+ gwenActor.userData.leaveStart=gwenActor.position.clone();
+ jonahActor=makeCrowdPerson(2.6,4.5,.95,0x6b4b43,111);
+ jonahActor.userData.leaveStart=jonahActor.position.clone();
+ // Gwen's handheld microphone.
+ micProp=mesh(new THREE.CylinderGeometry(.045,.06,.42,8),dark,gwenActor);micProp.position.set(.34,1.73,.23);micProp.rotation.z=-.18;
+ const micHead=mesh(new THREE.SphereGeometry(.075,8,6),mat(0x343b45,.25,.6),gwenActor);micHead.position.set(.34,1.96,.23);
+ crowdGroup.visible=true;
+}
+function updateCrowd(dt,t){
+ if(!crowdGroup||!crowdGroup.visible)return;
+ for(const actor of crowdActors){const u=actor.userData;u.gait+=dt*2.5;u.cheer+=dt*(3.8+(u.seed%4)*.5);const raise=(.5+.5*Math.sin(u.cheer))*1.45;
+  actor.userData.arms[0].rotation.x=-.25-raise;actor.userData.arms[1].rotation.x=-.25+raise*.8;
+  actor.userData.legs[0].rotation.x=Math.sin(u.gait)*.12;actor.userData.legs[1].rotation.x=-Math.sin(u.gait)*.12;actor.position.y=Math.abs(Math.sin(u.cheer*1.1))*.10;
+ }
+ if(gwenActor&&gwenActor.visible){gwenActor.userData.arms[0].rotation.x=-1.2;gwenActor.userData.arms[1].rotation.x=Math.sin(t*4)*.18;}
+ if(jonahActor&&jonahActor.visible){jonahActor.userData.arms[0].rotation.x=-.3;jonahActor.userData.arms[1].rotation.x=-.9+Math.sin(t*5)*.25;}
+}
+const endingSequence=[
+ {type:'crowd',key:'end-cheer',kicker:'THE CITY CELEBRATES',speaker:'100 FANS',line:'LET’S GOOOOO, SPIDEY!',hold:.35},
+ {type:'gwenSpeech',key:'end-gwen',kicker:'LIVE FROM THE CITY',speaker:'GWEN STACY',line:'Spidey is our hero, not a menace!',hold:.3},
+ {type:'jonahSpeech',key:'end-jonah',kicker:'BREAKING NEWS',speaker:'J. JONAH JAMESON',line:'No! This Spidey again! He’s damaging properties again!',hold:.3},
+ {type:'crowdLeaves',duration:4.2},
+ {type:'askGwen',key:'end-ask-gwen',kicker:'AFTER THE CELEBRATION',speaker:'SPIDER-MAN',line:'Gwen, can we talk somewhere quiet?',hold:.3},
+ {type:'walkPrivate',duration:6.8},
+ {type:'privateTalk',key:'end-gwen-quiet',kicker:'SOMEWHERE QUIET',speaker:'GWEN STACY',line:'Sure, Pete. What is it?',hold:.25},
+ {type:'privateTalk',key:'end-peter-reveal',kicker:'A SECRET TO SHARE',speaker:'SPIDER-MAN',line:'There’s something I want you to see.',hold:.25},
+ {type:'unmask',duration:1.25},
+ {type:'privateTalk',key:'end-gwen-recognizes',kicker:'THE PERSON UNDER THE MASK',speaker:'GWEN STACY',line:'Peter? It’s really you.',hold:.3},
+ {type:'kissTen',duration:10}, // Keep this romantic beat for a full 10 seconds.
+ {type:'privateTalk',key:'end-peter-have-to-go',kicker:'TIME TO GO',speaker:'PETER',line:'I have to go, Gwen.',hold:.2},
+ {type:'kissThree',duration:3}, // Gwen's goodbye kiss lasts 3 seconds.
+ {type:'endTitle',key:'end-title',kicker:'SPIDER-MAN: CITY CHASE',speaker:'NARRATOR',line:'City saved. Hero forever.',hold:.8},
+ {type:'titleHold',duration:2.2}
+];
+function removePrivatePlaceProps(){
+ for(const o of privatePlaceProps){if(o.parent)o.parent.remove(o);if(o.geometry)o.geometry.dispose();if(o.material&&o.material.dispose)o.material.dispose()}
+ privatePlaceProps=[];
+}
+function addPrivateProp(geo,material,x,y,z,rx=0,ry=0,rz=0){
+ const o=mesh(geo,material);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);privatePlaceProps.push(o);return o;
+}
+function createQuietPlace(x,z){
+ removePrivatePlaceProps();
+ const wood=mat(0x4a3329,.75,.02),stone=mat(0x313b46,.82,.04),metal=mat(0x1f2933,.42,.45);
+ // An open-air spot at the city spawn: a bench and lamppost frame their private conversation.
+ addPrivateProp(new THREE.BoxGeometry(2.6,.12,.42),wood,x+3,.52,z+2.2);
+ addPrivateProp(new THREE.BoxGeometry(.13,.78,.14),metal,x+2.1,.32,z+2.2);
+ addPrivateProp(new THREE.BoxGeometry(.13,.78,.14),metal,x+3.9,.32,z+2.2);
+ addPrivateProp(new THREE.BoxGeometry(2.6,.12,.32),wood,x+3,.88,z+2.2);
+ addPrivateProp(new THREE.CylinderGeometry(.09,.14,5.5,8),metal,x-3,2.75,z+1.2);
+ addPrivateProp(new THREE.CylinderGeometry(.055,.06,1.0,7),metal,x-2.55,5.25,z+1.2,0,0,-Math.PI/2);
+ addPrivateProp(new THREE.SphereGeometry(.17,10,8),lampMat,x-2.05,5.1,z+1.2);
+ const glow=new THREE.PointLight(0xffd9a0,.85,12,2);glow.position.set(x-2.05,4.95,z+1.2);scene.add(glow);privatePlaceProps.push(glow);
+}
+function enterEndingStage(index){
+ if(!cutsceneData)return;
+ cutsceneData.endStageIndex=index;cutsceneData.endStageTime=0;cutsceneData.dialogueDone=true;cutsceneData.dialogueFinishedAt=0;
+ cutsceneData.maskRemoved=cutsceneData.maskRemoved||false;
+ const stage=endingSequence[index];
+ csLastLine='';
+ if(stage.key)csLine(stage.key,stage.kicker,stage.speaker,stage.line);
+ if(stage.type==='walkPrivate'){
+  if(crowdGroup)crowdGroup.visible=false;
+  if(gwenActor&&gwenActor.parent!==scene)scene.attach(gwenActor);
+  if(gwenActor){gwenActor.visible=true;gwenActor.position.set(-2.6,0,4.5)}
+  player.scale.setScalar(1);setSuitMode(true);setMaskMode(true);
+  player.position.set(0,0,-2.6);player.rotation.set(0,0,0);
+  cutsceneData.walkStartPlayer=player.position.clone();
+  cutsceneData.walkStartGwen=gwenActor?gwenActor.position.clone():new THREE.Vector3(-2.6,0,4.5);
+  cutsceneData.privateX=0;cutsceneData.privateZ=-3.5;
+  cutsceneData.walkTargetPlayer=new THREE.Vector3(-.72,0,-3.25);
+  cutsceneData.walkTargetGwen=new THREE.Vector3(.72,0,-3.65);
+  cutsceneData.walkYawPlayer=Math.atan2(cutsceneData.walkTargetPlayer.x-cutsceneData.walkStartPlayer.x,cutsceneData.walkTargetPlayer.z-cutsceneData.walkStartPlayer.z);
+  cutsceneData.walkYawGwen=Math.atan2(cutsceneData.walkTargetGwen.x-cutsceneData.walkStartGwen.x,cutsceneData.walkTargetGwen.z-cutsceneData.walkStartGwen.z);
+  createQuietPlace(cutsceneData.privateX,cutsceneData.privateZ);
+ }
+}
+function startEnding(){
+ endingActive=true;introActive=false;
+ cutsceneData={time:0,endStageIndex:0,endStageTime:0,dialogueDone:true,dialogueFinishedAt:0,voiceToken:0,maskRemoved:false};csLastLine='';csShow();
+ if(webLine)webLine.visible=false;zip=false;gliding=false;clearEnemies();setSuitMode(true);setMaskMode(true);player.scale.setScalar(1);regen();
+ const roof=buildings.reduce((best,b)=>Math.hypot(b.userData.x,b.userData.z)<Math.hypot(best.userData.x,best.userData.z)?b:best,buildings[0]);endingRoof=roof;
+ const u=roof.userData,top=u.h-.2;cutsceneData.roofX=u.x;cutsceneData.roofZ=u.z;cutsceneData.roofY=top;
+ createCrowdScene();player.position.set(0,0,-2.6);player.rotation.set(0,0,0);vel.set(0,0,0);
+ if(mjCutsceneActor){scene.remove(mjCutsceneActor);mjCutsceneActor=null}
+ $('finish').style.display='none';camera.position.set(0,9,-13);camera.lookAt(0,2,11);
+ enterEndingStage(0);
+}
+function finishEnding(){
+ if(!endingActive)return;endingActive=false;
+ if(cutsceneData&&cutsceneData.dialogueFallbackTimer)clearTimeout(cutsceneData.dialogueFallbackTimer);
+ if('speechSynthesis' in window){try{speechSynthesis.cancel()}catch(e){}}
+ csHide();
+ if(mjCutsceneActor){scene.remove(mjCutsceneActor);mjCutsceneActor=null}
+ if(gwenActor){if(gwenActor.parent)gwenActor.parent.remove(gwenActor);scene.remove(gwenActor);gwenActor=null}
+ if(crowdGroup){scene.remove(crowdGroup);crowdGroup=null;crowdActors=[];jonahActor=null;micProp=null}
+ removePrivatePlaceProps();
+ player.scale.setScalar(1);setSuitMode(true);setMaskMode(true);
+ player.position.set(0,0,-6);player.rotation.set(0,0,0);
+ cutsceneData=null;completeLevel();$('msg').innerHTML='';showFinish();
+}
+function resetKissPose(){
+ player.rotation.set(0,Math.PI/2,0);player.position.set(cutsceneData.privateX-.32,0,cutsceneData.privateZ);
+ if(gwenActor){gwenActor.rotation.set(0,-Math.PI/2,0);gwenActor.position.set(cutsceneData.privateX+.32,0,cutsceneData.privateZ)}
+ player.scale.setScalar(.62);setMaskMode(false);
+ head.rotation.set(0,0,0);arms[0].rotation.set(0,0,-.12);arms[1].rotation.set(0,0,.12);
+ if(gwenActor&&gwenActor.userData){gwenActor.userData.head.rotation.set(0,0,0);gwenActor.userData.arms[0].rotation.set(0,0,-.10);gwenActor.userData.arms[1].rotation.set(0,0,.10)}
+}
+function animateEndingWalk(t){
+ const gait=t*6.8;
+ arms[0].rotation.x=Math.sin(gait+Math.PI)*.38;arms[1].rotation.x=Math.sin(gait)*.38;
+ legs[0].rotation.x=Math.sin(gait)*.42;legs[1].rotation.x=Math.sin(gait+Math.PI)*.42;
+ player.position.y=Math.abs(Math.sin(gait*2))*.035;
+ if(gwenActor&&gwenActor.userData){
+  const a=gwenActor.userData.arms,l=gwenActor.userData.legs;
+  a[0].rotation.x=Math.sin(gait+Math.PI)*.32;a[1].rotation.x=Math.sin(gait)*.32;
+  l[0].rotation.x=Math.sin(gait)*.34;l[1].rotation.x=Math.sin(gait+Math.PI)*.34;
+  gwenActor.position.y=Math.abs(Math.sin(gait*2+.4))*.025;
+ }
+}
+function updateEnding(dt){
+ if(!cutsceneData||!endingRoof)return;
+ cutsceneData.time+=dt;cutsceneData.endStageTime+=dt;
+ const d=cutsceneData,stage=endingSequence[d.endStageIndex],t=d.endStageTime;
+ if(!stage){finishEnding();return}
+ updateCrowd(dt,d.time);
+ const privateTypes=['privateTalk','unmask','kissTen','kissThree','endTitle','titleHold'];
+ if(stage.type==='crowd'||stage.type==='gwenSpeech'||stage.type==='jonahSpeech'||stage.type==='askGwen'){
+  if(crowdGroup)crowdGroup.visible=true;
+  player.position.set(0,0,-2.6);player.scale.setScalar(1);player.rotation.y=stage.type==='askGwen'?-0.35:0;
+  setSuitMode(true);setMaskMode(true);
+  if(stage.type==='crowd'){
+   camera.position.lerp(new THREE.Vector3(0,9,-13),1-Math.exp(-dt*1.8));camera.lookAt(0,2,11);
+  }else if(stage.type==='gwenSpeech'){
+   camera.position.lerp(new THREE.Vector3(-5.2,3.5,.5),1-Math.exp(-dt*3));camera.lookAt(-2.4,1.5,4.6);
+   if(gwenActor){gwenActor.rotation.y=Math.PI;gwenActor.userData.arms[0].rotation.x=-1.55;gwenActor.userData.arms[1].rotation.x=-.15;}
+  }else if(stage.type==='jonahSpeech'){
+   camera.position.lerp(new THREE.Vector3(5.3,3.5,.5),1-Math.exp(-dt*3));camera.lookAt(2.5,1.5,4.6);
+   if(jonahActor){jonahActor.rotation.y=Math.PI;jonahActor.userData.arms[0].rotation.x=-.5;jonahActor.userData.arms[1].rotation.x=-1.6;}
+  }else{
+   camera.position.lerp(new THREE.Vector3(-1.2,4.1,4.1),1-Math.exp(-dt*2.6));camera.lookAt(-1,1.8,1.2);
+   if(gwenActor)gwenActor.rotation.y=Math.PI;
+  }
+ }else if(stage.type==='crowdLeaves'){
+  if(crowdGroup)crowdGroup.visible=true;
+  const p=smooth(t/stage.duration);
+  // Fans visibly walk out through the far side of the plaza instead of vanishing instantly.
+  for(const actor of crowdActors){
+   const u=actor.userData,st=u.leaveStart||actor.position.clone();
+   const side=Math.sign(st.x||((u.seed%2)?1:-1));
+   actor.visible=t<stage.duration-.12;
+   actor.position.set(st.x+side*p*(7+(u.seed%5)*.75),Math.abs(Math.sin(t*7+u.seed))*.025,st.z+p*(22+(u.seed%6)*2.2));
+   actor.rotation.y=Math.atan2(side*.9,1.8);
+   const gait=t*6.5+u.seed;
+   actor.userData.arms[0].rotation.x=Math.sin(gait+Math.PI)*.28;
+   actor.userData.arms[1].rotation.x=Math.sin(gait)*.28;
+   actor.userData.legs[0].rotation.x=Math.sin(gait)*.37;
+   actor.userData.legs[1].rotation.x=Math.sin(gait+Math.PI)*.37;
+  }
+  if(jonahActor){
+   const st=jonahActor.userData.leaveStart||new THREE.Vector3(2.6,0,4.5);
+   jonahActor.visible=t<stage.duration-.12;
+   jonahActor.position.set(st.x+p*17,Math.abs(Math.sin(t*6))*.02,st.z+p*22);
+   jonahActor.rotation.y=Math.atan2(1.2,2.0);
+   const gait=t*6.5;
+   jonahActor.userData.arms[0].rotation.x=Math.sin(gait+Math.PI)*.24;
+   jonahActor.userData.arms[1].rotation.x=Math.sin(gait)*.24;
+   jonahActor.userData.legs[0].rotation.x=Math.sin(gait)*.32;
+   jonahActor.userData.legs[1].rotation.x=Math.sin(gait+Math.PI)*.32;
+  }
+  // Keep Gwen in place so she can leave with Peter after the crowd clears.
+  if(gwenActor){gwenActor.visible=true;gwenActor.position.set(-2.6,0,4.5);gwenActor.rotation.y=Math.PI;}
+  camera.position.lerp(new THREE.Vector3(0,8,-12),1-Math.exp(-dt*1.8));
+  camera.lookAt(0,2,13);
+ }else if(stage.type==='walkPrivate'){
+  if(crowdGroup)crowdGroup.visible=false;
+  if(gwenActor)gwenActor.visible=true;
+  const p=smooth(t/stage.duration);
+  player.position.lerpVectors(d.walkStartPlayer,d.walkTargetPlayer,p);
+  if(gwenActor)gwenActor.position.lerpVectors(d.walkStartGwen,d.walkTargetGwen,p);
+  player.rotation.y=d.walkYawPlayer; if(gwenActor)gwenActor.rotation.y=d.walkYawGwen;
+  player.scale.setScalar(approach(1,.62,smooth(t/.85)));
+  animateEndingWalk(t);
+  const center=player.position.clone().lerp(gwenActor?gwenActor.position:player.position,.5);
+  camera.position.lerp(center.clone().add(new THREE.Vector3(5,4.7,9)),1-Math.exp(-dt*2.2));camera.lookAt(center.clone().add(new THREE.Vector3(0,1.25,0)));
+ }else if(privateTypes.includes(stage.type)){
+  if(crowdGroup)crowdGroup.visible=false;
+  const px=d.privateX??0,pz=d.privateZ??-6;
+  player.scale.setScalar(.62);
+  if(stage.type==='unmask'){
+   player.position.set(px-.58,0,pz);player.rotation.y=Math.PI/2;
+   if(gwenActor){gwenActor.position.set(px+.58,0,pz);gwenActor.rotation.y=-Math.PI/2;}
+   const p=smooth(t/stage.duration);
+   arms[0].rotation.x=approach(0,-1.1,p);arms[1].rotation.x=approach(0,-.85,p);
+   if(p>.68&&!d.maskRemoved){setMaskMode(false);d.maskRemoved=true;}
+   camera.position.lerp(new THREE.Vector3(px+3.8,3.4,pz+6.8),1-Math.exp(-dt*2.8));camera.lookAt(px,1.65,pz);
+  }else if(stage.type==='kissTen'){
+   resetKissPose();
+   const sway=Math.sin(t*1.35)*.012;
+   player.rotation.z=.045+sway;gwenActor.rotation.z=-.045-sway;
+   head.rotation.x=.035;
+   arms[0].rotation.x=-.42;arms[1].rotation.x=-.36;
+   gwenActor.userData.arms[0].rotation.x=-.4;gwenActor.userData.arms[1].rotation.x=-.36;
+   gwenActor.userData.head.rotation.x=.025;
+   camera.position.lerp(new THREE.Vector3(px+2.5,3.1,pz+6.6),1-Math.exp(-dt*2.4));camera.lookAt(px,1.55,pz);
+  }else if(stage.type==='kissThree'){
+   resetKissPose();
+   const sway=Math.sin(t*2.8)*.02;
+   gwenActor.rotation.z=-.075-sway;player.rotation.z=.04+sway;
+   gwenActor.userData.arms[0].rotation.x=-.52;gwenActor.userData.arms[1].rotation.x=-.43;
+   player.rotation.x=-.015;
+   camera.position.lerp(new THREE.Vector3(px+2.2,3.0,pz+6.2),1-Math.exp(-dt*3));camera.lookAt(px,1.55,pz);
+  }else if(stage.type==='endTitle'){
+   player.position.set(px-.85,0,pz);player.rotation.set(0,Math.PI/2,0);setMaskMode(false);
+   gwenActor.position.set(px+.85,0,pz);gwenActor.rotation.set(0,-Math.PI/2,0);
+   camera.position.lerp(new THREE.Vector3(px+2,4,pz+8),1-Math.exp(-dt*2));camera.lookAt(px,1.6,pz);
+  }else{
+   player.position.set(px-.85,0,pz);player.rotation.set(0,Math.PI/2,0);
+   if(gwenActor){gwenActor.position.set(px+.85,0,pz);gwenActor.rotation.set(0,-Math.PI/2,0)}
+   camera.lookAt(px,1.6,pz);
+  }
+ }
+ // Advance only after the subtitle voice finishes. Actions (crowd departure, walk, unmask, and kisses) then play to completion.
+ if(stage.key){
+  if(!d.dialogueDone)return;
+  if(t-(d.dialogueFinishedAt||0)<(stage.hold||0))return;
+ }else if(t<stage.duration)return;
+ const next=d.endStageIndex+1;
+ if(next>=endingSequence.length){finishEnding();return}
+ enterEndingStage(next);
+}
+$('skipCutscene').addEventListener('click',skipCutscene);
+function startLevel(n){level=n;stage=1;wave=0;clearEnemies();regen();wallClimbing=false;wallBuilding=null;wallNormal=null;doubleJumpUsed=false;backflipTime=0;if(webLine)webLine.visible=false;swingAttached=false;webHeld=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;if(n===1){say('WELCOME TO THE CITY','Your suit is ready. Explore the city, then press E when you are ready for your first mission.',7);stage=0;
+player.position.set(0,0,0);yaw=0;pitch=-.1;setSuitMode(true)}
+else if(n===2){say('LEVEL 2 · STREET TROUBLE','Defeat the bandits. Use F or left-click to fight.',4);spawnBandits(6)}
+else if(n===3){say('LEVEL 3 · BANK ROBBERY','Bandits: “We need revenge!” SPIDER-MAN: “Oh, really? I hate this day.”',5);spawnBandits(8)}
+else if(n===4){mj={position:new THREE.Vector3(0,0,-90)};const markerMat=mat(0xffcf75);let m=mesh(new THREE.CylinderGeometry(.25,.25,3,10),markerMat);m.position.set(0,1.5,-90);say('LEVEL 4 · SAVE MJ','Green Goblin has taken MJ! Chase him through the city. Press G to deploy your glider, then hold Space while falling.',6);greenGoblin=makePerson('greenGoblin',0,-30,180);greenGoblin.userData.flee=true;missionTimer=0}
+else if(n>=5&&n<=8){say('LEVEL '+n+' · ROOFTOP PURSUIT','Chase Green Goblin! Clear the bandits blocking your path.',3.5);if(!greenGoblin){greenGoblin=makePerson('greenGoblin',0,-110-(n-5)*18,180);greenGoblin.userData.flee=true}spawnBandits(n-3)}
+else if(n===9){say('LEVEL 9 · FINAL CHASE','Catch Green Goblin before the 120-second timer runs out!',4);missionTimer=120;greenGoblin=makePerson('greenGoblin',0,-125,180);greenGoblin.userData.flee=true}
+else if(n===10){say('LEVEL 10 · FOUR-WAVE SHOWDOWN','Defeat all four villains in order. Health restores after every wave.',4);wave=1;startBossWave('greenGoblin')}
+}
+function nextLevel(){day++;$('mission').innerHTML='DAY '+day+' · LEVEL '+Math.min(level+1,10)+'<br>The next day begins…';say('THE NEXT DAY','Day '+day+' — a new mission begins.',2.5);setTimeout(()=>startLevel(Math.min(level+1,10)),1800)}
+function completeLevel(){if(stage===2)return;stage=2;regen();say('LEVEL '+level+' COMPLETE','Press E to continue to the next day.',999)}
+function damageBoss(e,amount){if(!e||!e.userData.alive)return;e.userData.hp-=amount;if(e.userData.hp<=0){const type=e.userData.type;removeEnemy(e);if(level===10){regen();player.position.set(0,0,0);vel.set(0,0,0);yaw=0;pitch=-.1;if(wave<4){wave++;const next=['','greenGoblin','kingpin','docock','venom'][wave];setTimeout(()=>{player.position.set(0,0,0);startBossWave(next)},700)}else{startEnding()}}else if(type==='greenGoblin'){say('GOBLIN GOT AWAY!','He escapes deeper into the city — keep chasing!',2);if(level===4){startLevel(5)}else if(level>=5&&level<=8){if(level<8)startLevel(level+1);else startLevel(9)}else if(level===9){completeLevel()}}else{completeLevel()}}updateBossBar()}
+function attack(){if(attackCooldown>0)return;attackCooldown=.42;punchAnim=.34;punchSide=attackSide;attackSide=1-attackSide;let target=null,dist=4.8;for(const e of enemies){let d=e.position.distanceTo(player.position);if(d<dist){dist=d;target=e}}if(target){let amount=10;damageBoss(target,amount);if(target.userData.alive){const dir=target.position.clone().sub(player.position);dir.y=0;if(dir.lengthSq())target.position.add(dir.normalize().multiplyScalar(1.2))}say('WEB COMBO!','10 damage',.55)}else say('WEB STRIKE','Get closer to an enemy!',.65)}
+function targetBuilding(){raycaster.setFromCamera(mouse,camera);const hits=raycaster.intersectObjects(buildings,false);selectedBuilding=hits.length?hits[0].object:null;return hits.length?hits[0].point:null}
+function webPull(){
+ if(swingAttached)return;
+ if(energy<8){say('WEB ENERGY LOW','Wait a moment for your web energy to recharge.',1.2);return}
+ const target=targetBuilding();
+ const anchorBuilding=selectedBuilding;
+ if(!target||!anchorBuilding){say('NO BUILDING TARGET','Aim the crosshair at a building, then hold right-click.',1.3);return}
+ const u=anchorBuilding.userData;
+ const dx=target.x-u.x,dz=target.z-u.z;
+ if(Math.abs(dx/u.w)>Math.abs(dz/u.d))target.x=u.x+Math.sign(dx||1)*(u.w/2+.22);
+ else target.z=u.z+Math.sign(dz||1)*(u.d/2+.22);
+ target.y=Math.min(u.h-.6,Math.max(target.y,player.position.y+11));
+ webAnchor=target.clone();webTarget=webAnchor.clone();webAnchorBuilding=anchorBuilding;
+ const handOffset=new THREE.Vector3(0,2.4,0);
+ const hand=player.position.clone().add(handOffset);
+ ropeLength=hand.distanceTo(webAnchor);
+ if(ropeLength<7.5){webAnchor=null;webAnchorBuilding=null;ropeLength=0;say('AIM HIGHER','Aim higher on a tall building for a longer swing.',1.2);return}
+ swingAttached=true;webHeld=true;swingReleaseTimer=0;ground=false;wallClimbing=false;wallBuilding=null;wallNormal=null;energy-=8;
+ // Start with momentum along the swing tangent, never straight toward the anchor.
+ const ropeDirection=hand.clone().sub(webAnchor).normalize();
+ vel.addScaledVector(ropeDirection,-vel.dot(ropeDirection));
+ const facing=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ let tangent=facing.clone().addScaledVector(ropeDirection,-facing.dot(ropeDirection));
+ if(tangent.lengthSq()<.04){
+  const right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+  tangent.copy(right).addScaledVector(ropeDirection,-right.dot(ropeDirection));
+ }
+ if(tangent.lengthSq()>.001){tangent.normalize();vel.addScaledVector(tangent,keys.ShiftLeft||keys.ShiftRight?18:12.5)}
+ const maxInitial=(keys.ShiftLeft||keys.ShiftRight)?28:23;
+ if(vel.length()>maxInitial)vel.setLength(maxInitial);
+ if(!webLine){webLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xe8fbff}));scene.add(webLine)}
+ webLine.visible=true;webLine.geometry.setFromPoints([hand,webAnchor]);
+ say('WEB ATTACHED!','Hold right-click to swing. Hold Shift to build speed.',1.4);
+}
+function releaseWebSwing(){
+ webHeld=false;
+ if(!swingAttached)return;
+ // Release without any inward pull: retain the actual tangential velocity.
+ swingAttached=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;swingReleaseTimer=1.1;
+ if(vel.length()>30)vel.setLength(30);
+ if(webLine)webLine.visible=false;
+ say('WEB RELEASED!','Your swing momentum carries you forward.',.9);
+}
+function findClimbableWall(wish){
+ if(!wish||wish.lengthSq()<.05)return null;
+ let best=null,bestGap=Infinity;
+ for(const b of buildings){
+  const u=b.userData,dx=player.position.x-u.x,dz=player.position.z-u.z;
+  if(player.position.y<-.2||player.position.y>u.h-3.1)continue;
+  let normal=null,gap=Infinity;
+  const xFaceGap=Math.abs(Math.abs(dx)-u.w/2),zFaceGap=Math.abs(Math.abs(dz)-u.d/2);
+  if(Math.abs(dz)<=u.d/2+.35&&xFaceGap<1.25){normal=new THREE.Vector3(Math.sign(dx)||1,0,0);gap=xFaceGap}
+  if(Math.abs(dx)<=u.w/2+.35&&zFaceGap<1.25&&zFaceGap<gap){normal=new THREE.Vector3(0,0,Math.sign(dz)||1);gap=zFaceGap}
+  if(normal&&gap<bestGap&&wish.dot(normal)<-.22){best={building:b,normal};bestGap=gap}
+ }
+ return best;
+}
+function attachToWall(hit){
+ if(!hit)return;
+ wallClimbing=true;wallBuilding=hit.building;wallNormal=hit.normal.clone();wallMoveAmount=0;ground=false;vel.set(0,0,0);swingAttached=false;webHeld=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;if(webLine)webLine.visible=false;
+ const u=wallBuilding.userData;
+ if(Math.abs(wallNormal.x)>.5){player.position.x=u.x+wallNormal.x*(u.w/2+.56);player.position.z=Math.max(u.z-u.d/2+.55,Math.min(u.z+u.d/2-.55,player.position.z));}
+ else{player.position.z=u.z+wallNormal.z*(u.d/2+.56);player.position.x=Math.max(u.x-u.w/2+.55,Math.min(u.x+u.w/2-.55,player.position.x));}
+ const face=wallNormal.clone().negate();yaw=Math.atan2(-face.x,-face.z);
+ say('WALL CRAWL!','Hold W to climb, A/D to move sideways, Space to jump off.',1.3);
+}
+function beginBackflip(){backflipTime=.68;player.rotation.x=0;}
+function handleSpacePress(){
+ const now=performance.now(),doubleTap=now-lastSpaceTap<340;lastSpaceTap=now;
+ if(wallClimbing&&wallBuilding){
+  const n=wallNormal?wallNormal.clone():new THREE.Vector3(0,0,1);
+  wallClimbing=false;wallBuilding=null;wallNormal=null;ground=false;
+  vel.x=n.x*(doubleTap?10:7.5);vel.z=n.z*(doubleTap?10:7.5);vel.y=doubleTap?14:10.5;
+  doubleJumpUsed=doubleTap;if(doubleTap)beginBackflip();return;
+ }
+ if(swingAttached){
+  releaseWebSwing();vel.y=Math.max(vel.y,doubleTap?9:4.5);
+  if(doubleTap){doubleJumpUsed=true;beginBackflip()}else doubleJumpUsed=false;
+  return;
+ }
+ if(ground){vel.y=doubleTap?13.8:10;ground=false;doubleJumpUsed=false;if(doubleTap){beginBackflip();doubleJumpUsed=true}return;}
+ if(doubleTap&&!doubleJumpUsed){vel.y=Math.max(vel.y,0)+12.8;doubleJumpUsed=true;beginBackflip();}
+}
+function updatePlayerAnimation(dt,walkingSpeed,sprinting){
+ gaitTime+=dt*(walkingSpeed>.25?(sprinting?13:8.5):2.2);
+ const moving=Math.min(1,walkingSpeed/(sprinting?9:5));
+ const stride=(sprinting?.82:.5)*moving;
+ const swingPhase=Math.sin(gaitTime);
+ let armLeft=swingPhase*stride,armRight=-swingPhase*stride;
+ let legLeft=-swingPhase*stride,legRight=swingPhase*stride;
+ torso.rotation.z=0;torso.rotation.x=0;pelvis.rotation.z=0;
+ if(swingAttached){armLeft=-1.35+Math.sin(gaitTime*1.7)*.18;armRight=-1.35-Math.sin(gaitTime*1.7)*.18;legLeft=.36+Math.sin(gaitTime*2)*.31;legRight=.36-Math.sin(gaitTime*2)*.31;torso.rotation.x=-.28;pelvis.rotation.x=.14;}
+ if(wallClimbing){const c=Math.sin(gaitTime*1.5)*.55;armLeft=-.75+c;armRight=-.75-c;legLeft=.55-c*.7;legRight=.55+c*.7;torso.rotation.x=-.16;}
+ if(gliding&&level>=4&&player.position.y>1){armLeft=-1.35+Math.sin(gaitTime)*.04;armRight=1.35-Math.sin(gaitTime)*.04;legLeft=.8;legRight=.8;torso.rotation.x=Math.PI/2;pelvis.rotation.x=0;}
+ else if(!ground&&!swingAttached&&!wallClimbing&&player.position.y>1){torso.rotation.x=.28;armLeft=-.9;armRight=.9;legLeft=.35;legRight=-.35;}
+ if(punchAnim>0){punchAnim=Math.max(0,punchAnim-dt);const p=1-punchAnim/.34;const strike=Math.sin(Math.min(1,p*1.45)*Math.PI*.5);if(punchSide===0)armLeft=-1.9*strike;else armRight=-1.9*strike;torso.rotation.y=(punchSide===0?.12:-.12)*strike;}
+ arms[0].rotation.x=armLeft;arms[1].rotation.x=armRight;
+ legs[0].rotation.x=legLeft;legs[1].rotation.x=legRight;
+ const bob=(walkingSpeed>.25&&!wallClimbing&&!swingAttached)?Math.abs(Math.sin(gaitTime*2))*(sprinting?.10:.055):0;
+ torso.position.y=2.15+bob;pelvis.position.y=1.45+bob*.6;head.position.y=3.05+bob*.5;
+ if(backflipTime>0){backflipTime=Math.max(0,backflipTime-dt);const progress=1-backflipTime/.68;player.rotation.x=Math.PI*2*progress;}
+ else player.rotation.x=0;
+}
+function throwBomb(e){let m=mesh(new THREE.SphereGeometry(.38,12,8),mat(0x40392e,.3,.25));m.material.emissive=new THREE.Color(0xff501c);m.material.emissiveIntensity=.8;m.position.copy(e.position).add(new THREE.Vector3(0,2,0));const target=player.position.clone().add(new THREE.Vector3(0,0,0));bombs.push({mesh:m,target,life:3,hit:false});}
+function hurt(amount){if(invuln>0)return;health-=amount;invuln=.7;damageQuiet=0;if(health<=0){health=300;player.position.set(0,0,0);vel.set(0,0,0);say('KNOCKED DOWN','You recover and can keep fighting.',2)}}
+function updateEnemies(dt){for(const e of [...enemies]){const u=e.userData;if(!u.alive)continue;const oldX=e.position.x,oldZ=e.position.z;let d=e.position.distanceTo(player.position),dir=player.position.clone().sub(e.position);dir.y=0;if(dir.lengthSq())dir.normalize();e.rotation.y=Math.atan2(dir.x,dir.z);u.cd-=dt;
+if(u.flee){e.position.z-=dt*(level===9?7:4.3);e.position.x+=Math.sin(performance.now()*.001+e.position.z)*dt*1.8;if(d<3)damageBoss(e,10);if(level===4&&e.position.z<-75){say('MJ RESCUED!','Green Goblin escapes — pursue him!',2);startLevel(5)}if(level>=5&&level<=8&&e.position.z<-135){if(level<8)startLevel(level+1);else startLevel(9)}if(level===9){missionTimer-=dt;if(missionTimer<=0){say('TIME UP','Green Goblin escaped. Try the chase again!',2);startLevel(9)}if(e.position.z<-330){damageBoss(e,9999)}}}
+else if(u.type==='greenGoblin'&&level===10){if(u.cd<=0){u.cd=10;throwBomb(e);say('PUMPKIN BOMB!','Dodge with Shift and keep moving!',1.2)}if(d>5)e.position.add(dir.clone().multiplyScalar(u.speed*dt));else if(u.attackClock<=0){hurt(20);u.attackClock=1.2}}
+else if(u.type==='kingpin'){if(d>3)e.position.add(dir.clone().multiplyScalar(u.speed*dt));if(u.cd<=0){u.cd=5;u.jumpAttack=1.0;say('SPIDER-SENSE!','Kingpin is jumping! Hold Shift and dodge to safety!',1.4);$('sense').style.display='block';setTimeout(()=>$('sense').style.display='none',1200);e.position.y=5;setTimeout(()=>{e.position.y=0;if(e.position.distanceTo(player.position)<5)hurt(40)},850)}if(d<3&&u.attackClock<=0){hurt(20);u.attackClock=1.2}}
+else if(u.type==='docock'){
+ if(d>4)e.position.add(dir.clone().multiplyScalar(u.speed*dt));
+ u.docAttackTimer-=dt;
+ if(u.docAttackTimer<=0&&!u.docAttack){
+  u.docAttackTimer=15;u.docAttack={time:0,target:player.position.clone().add(new THREE.Vector3(0,1.4,0)),hit:false};
+  senseFlashTimer=1.35;$('sense').style.display='block';say('SPIDER-SENSE!','Doctor Octopus is firing his tentacles! Dodge now!',1.35);
+ }
+ if(u.docAttack){
+  const a=u.docAttack;a.time+=dt;const origin=e.position.clone().add(new THREE.Vector3(0,2.8,0));
+  const launch=Math.min(1,a.time/.48),retract=a.time>0.9?Math.max(0,1-(a.time-.9)/.38):1;
+  for(let i=0;i<u.docTentacleLines.length;i++){
+   const line=u.docTentacleLines[i];line.visible=true;
+   const spread=new THREE.Vector3((i-1.5)*.32,((i%2)*.28)-.1,-.22);
+   const from=origin.clone().add(spread);
+   const end=from.clone().lerp(a.target,launch*retract);
+   line.geometry.setFromPoints([from,end]);
+  }
+  if(a.time>.55&&!a.hit){a.hit=true;if(player.position.distanceTo(a.target)<3.3){invuln=0;hurt(40);say('TENTACLE HIT!','Doctor Octopus hit you for 40 health!',1.25)}}
+  if(a.time>1.35){for(const line of u.docTentacleLines)line.visible=false;u.docAttack=null;}
+ }
+ if(d<3&&u.attackClock<=0){hurt(20);u.attackClock=1.1}
+}
+else if(u.type==='venom'){
+ u.venomFightTime+=dt;
+ if(d>3)e.position.add(dir.clone().multiplyScalar(u.speed*dt));
+ if(u.venomFightTime>=25&&d<10&&!u.venomThrow){
+  u.venomThrow={time:0,target:player.position.clone(),launched:false};u.venomFightTime=0;
+  senseFlashTimer=1.25;$('sense').style.display='block';say('VENOM GRABS YOU!','Spider-Sense! Venom is about to throw you into a building!',1.25);
+ }
+ if(u.venomThrow){
+  const vt=u.venomThrow;vt.time+=dt;
+  if(vt.time>.65&&!vt.launched){
+   vt.launched=true;let dirTo=player.position.clone().sub(e.position);dirTo.y=0;
+   if(dirTo.lengthSq()<.001)dirTo.set(0,0,1);dirTo.normalize();
+   let chosen=null,chosenScore=Infinity;
+   for(const b of buildings){const bu=b.userData,to=new THREE.Vector3(bu.x-player.position.x,0,bu.z-player.position.z),dist=to.length();if(dist<5||dist>65)continue;const forward=to.dot(dirTo)/dist;if(forward<.35)continue;const cross=Math.sqrt(Math.max(0,dist*dist-Math.pow(to.dot(dirTo),2)));const score=dist+cross*1.7;if(score<chosenScore){chosenScore=score;chosen=b}}
+   let launchDir=chosen?new THREE.Vector3(chosen.userData.x-player.position.x,0,chosen.userData.z-player.position.z):dirTo;
+   if(launchDir.lengthSq()<.001)launchDir.copy(dirTo);launchDir.normalize();vel.x=launchDir.x*27;vel.z=launchDir.z*27;vel.y=8.5;ground=false;wallClimbing=false;wallBuilding=null;wallNormal=null;swingAttached=false;webHeld=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;if(webLine)webLine.visible=false;venomThrowImpactTimer=3.2;
+   say('VENOM SMASH!','Venom hurls you toward a building!',1.5);
+  }
+  if(vt.time>1.4)u.venomThrow=null;
+ }else if(d<2.8&&u.attackClock<=0){hurt(30);u.attackClock=1.0}
+}
+else{if(d>1.8)e.position.add(dir.multiplyScalar(u.speed*dt));else if(u.attackClock<=0){hurt(8);u.attackClock=1.0}}
+u.attackClock=Math.max(0,u.attackClock-dt);
+ const enemySpeed=Math.hypot(e.position.x-oldX,e.position.z-oldZ)/Math.max(dt,.001);
+ u.gait+=dt*(2.2+Math.min(enemySpeed,5)*2.1);
+ const gaitAmp=Math.min(.68,enemySpeed*.20);
+ if(u.arms&&u.legs){
+  u.arms[0].rotation.x=Math.sin(u.gait)*gaitAmp;
+  u.arms[1].rotation.x=-Math.sin(u.gait)*gaitAmp;
+  u.legs[0].rotation.x=-Math.sin(u.gait)*gaitAmp;
+  u.legs[1].rotation.x=Math.sin(u.gait)*gaitAmp;
+ }
+}
+for(let i=bombs.length-1;i>=0;i--){let b=bombs[i];b.life-=dt;let to=b.target.clone().sub(b.mesh.position);if(to.length()>0.8)b.mesh.position.add(to.normalize().multiplyScalar(16*dt));else if(!b.hit){b.hit=true;if(player.position.distanceTo(b.target)<5)hurt(25);b.life=0}if(b.life<=0){scene.remove(b.mesh);bombs.splice(i,1)}}
+}
+function update(dt){
+ const f=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));
+ const r=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));
+ const wish=new THREE.Vector3();
+ if(keys.KeyW)wish.add(f);if(keys.KeyS)wish.sub(f);if(keys.KeyD)wish.add(r);if(keys.KeyA)wish.sub(r);
+ if(wish.lengthSq())wish.normalize();
+ const sprint=keys.ShiftLeft||keys.ShiftRight;
+ const speed=sprint?13.5:6.8;
+ venomThrowImpactTimer=Math.max(0,venomThrowImpactTimer-dt);senseFlashTimer=Math.max(0,senseFlashTimer-dt);if(senseFlashTimer<=0)$('sense').style.display='none';
+ wallMoveAmount=0;
+
+ if(wallClimbing&&wallBuilding){
+  const u=wallBuilding.userData;
+  const climbInput=(keys.KeyW?1:0)-(keys.KeyS?1:0);
+  const sideInput=(keys.KeyD?1:0)-(keys.KeyA?1:0);
+  const climbSpeed=sprint?6.7:4.5,sideSpeed=sprint?5.2:3.3;
+  const tangent=new THREE.Vector3(-wallNormal.z,0,wallNormal.x);
+  player.position.y+=climbInput*climbSpeed*dt;
+  player.position.addScaledVector(tangent,sideInput*sideSpeed*dt);
+  wallMoveAmount=Math.abs(climbInput)+Math.abs(sideInput);
+  if(Math.abs(wallNormal.x)>.5){
+   player.position.x=u.x+wallNormal.x*(u.w/2+.56);
+   player.position.z=Math.max(u.z-u.d/2+.55,Math.min(u.z+u.d/2-.55,player.position.z));
+  }else{
+   player.position.z=u.z+wallNormal.z*(u.d/2+.56);
+   player.position.x=Math.max(u.x-u.w/2+.55,Math.min(u.x+u.w/2-.55,player.position.x));
+  }
+  const face=wallNormal.clone().negate();yaw=Math.atan2(-face.x,-face.z);
+  vel.set(0,0,0);ground=false;
+  if(player.position.y>=u.h-.9){
+   player.position.y=u.h-.15;
+   player.position.addScaledVector(wallNormal,-1.3);
+   wallClimbing=false;wallBuilding=null;wallNormal=null;ground=false;
+   say('ROOFTOP REACHED!','You climbed to the top of the building.',1.2);
+  }
+  if(player.position.y<0)player.position.y=0;
+ }else if(swingAttached&&webHeld&&webAnchor){
+  // Fixed-anchor pendulum: gravity creates the arc; Shift adds a stronger tangential boost.
+  const handOffset=new THREE.Vector3(0,2.4,0);
+  const handPos=player.position.clone().add(handOffset);
+  const ropeVector=handPos.clone().sub(webAnchor);
+  const dist=Math.max(.001,ropeVector.length());
+  const ropeDirection=ropeVector.multiplyScalar(1/dist);
+  vel.y-=23.5*dt;
+  if(wish.lengthSq()){
+   let tangentWish=wish.clone().addScaledVector(ropeDirection,-wish.dot(ropeDirection));
+   if(tangentWish.lengthSq()>.001)vel.addScaledVector(tangentWish.normalize(),(sprint?30:14)*dt);
+  }
+  // A mild extra boost while sprinting. It follows existing motion, not the anchor.
+  if(sprint){
+   const tangentVelocity=vel.clone().addScaledVector(ropeDirection,-vel.dot(ropeDirection));
+   if(tangentVelocity.lengthSq()>.03)vel.addScaledVector(tangentVelocity.normalize(),8.5*dt);
+  }
+  vel.addScaledVector(ropeDirection,-vel.dot(ropeDirection));
+  vel.multiplyScalar(Math.exp(-.03*dt));
+  const cap=sprint?38:30;
+  if(vel.length()>cap)vel.setLength(cap);
+ }else if(zip&&webTarget){
+  // The scripted opening scene's web-zip shot only.
+  const dest=webTarget.clone().add(new THREE.Vector3(0,2,0)),to=dest.clone().sub(player.position);
+  if(to.length()<3){zip=false;if(webLine)webLine.visible=false;vel.add(to.normalize().multiplyScalar(3));}
+  else{vel.x+=(to.x/Math.max(to.length(),1)*speed*1.8-vel.x)*Math.min(1,dt*4);vel.z+=(to.z/Math.max(to.length(),1)*speed*1.8-vel.z)*Math.min(1,dt*4);vel.y+=(to.y/Math.max(to.length(),1)*speed*1.8-vel.y)*Math.min(1,dt*4);}
+ }else{
+  const steering=swingReleaseTimer>0?(wish.lengthSq()?2.6:.22):7;
+  swingReleaseTimer=Math.max(0,swingReleaseTimer-dt);
+  vel.x+=(wish.x*speed-vel.x)*Math.min(1,dt*steering);
+  vel.z+=(wish.z*speed-vel.z)*Math.min(1,dt*steering);
+  if(gliding&&level>=4&&player.position.y>1)vel.y=Math.max(-2.0,vel.y-2.4*dt);
+  else vel.y-=22*dt;
+ }
+ player.position.add(vel.clone().multiplyScalar(dt));
+
+ // Catch an ordinary walking/running approach to a wall and convert it to climbing.
+ if(!wallClimbing&&!swingAttached&&!zip&&wish.lengthSq()>.08){
+  const hit=findClimbableWall(wish);
+  if(hit)attachToWall(hit);
+ }
+
+ if(swingAttached&&webHeld&&webAnchor){
+  const handOffset=new THREE.Vector3(0,2.4,0);
+  const handPos=player.position.clone().add(handOffset);
+  const ropeVector=handPos.sub(webAnchor);
+  const distance=ropeVector.length();
+  if(distance>.001){
+   const ropeDirection=ropeVector.multiplyScalar(1/distance);
+   player.position.copy(webAnchor.clone().add(ropeDirection.multiplyScalar(ropeLength)).sub(handOffset));
+   const radialVelocity=vel.dot(ropeDirection);
+   vel.addScaledVector(ropeDirection,-radialVelocity);
+   if(vel.length()>(sprint?38:30))vel.setLength(sprint?38:30);
+  }
+  ground=false;
+ }
+
+ const cityLimit=280;
+ if(player.position.x>cityLimit){player.position.x=cityLimit;if(vel.x>0)vel.x=0;if(swingAttached)releaseWebSwing()}
+ if(player.position.x< -cityLimit){player.position.x= -cityLimit;if(vel.x<0)vel.x=0;if(swingAttached)releaseWebSwing()}
+ if(player.position.z>cityLimit){player.position.z=cityLimit;if(vel.z>0)vel.z=0;if(swingAttached)releaseWebSwing()}
+ if(player.position.z< -cityLimit){player.position.z= -cityLimit;if(vel.z<0)vel.z=0;if(swingAttached)releaseWebSwing()}
+ if(player.position.y>95){player.position.y=95;if(vel.y>0)vel.y=0;if(swingAttached)releaseWebSwing()}
+ if(player.position.y<0){player.position.y=0;if(wallClimbing){ground=false;vel.y=0}else if(swingAttached&&webHeld&&webAnchor){
+   // Keep rope length fixed even at the floor; never reel toward the anchor.
+   const handOffset=new THREE.Vector3(0,2.4,0),verticalGap=handOffset.y-webAnchor.y;
+   const horizontalSq=ropeLength*ropeLength-verticalGap*verticalGap;
+   if(horizontalSq>=0){let hx=player.position.x-webAnchor.x,hz=player.position.z-webAnchor.z,hl=Math.hypot(hx,hz);if(hl<.001){hx=Math.cos(yaw);hz=-Math.sin(yaw);hl=Math.hypot(hx,hz)}const required=Math.sqrt(horizontalSq);player.position.x=webAnchor.x+hx/hl*required;player.position.z=webAnchor.z+hz/hl*required;}
+   const handAtFloor=player.position.clone().add(handOffset),floorRopeDirection=handAtFloor.sub(webAnchor).normalize();vel.addScaledVector(floorRopeDirection,-vel.dot(floorRopeDirection));vel.y=Math.max(vel.y,0);ground=false;
+  }else{vel.y=0;ground=true;doubleJumpUsed=false}}
+
+ for(const b of buildings){if(swingAttached||wallClimbing)continue;const u=b.userData;if(Math.abs(player.position.x-u.x)<30&&Math.abs(player.position.z-u.z)<30&&player.position.y<u.h-1&&Math.abs(player.position.x-u.x)<u.w/2+.5&&Math.abs(player.position.z-u.z)<u.d/2+.5){if(Math.abs(player.position.x-u.x)/u.w>Math.abs(player.position.z-u.z)/u.d)player.position.x=u.x+Math.sign(player.position.x-u.x)*(u.w/2+.6);else player.position.z=u.z+Math.sign(player.position.z-u.z)*(u.d/2+.6);if(venomThrowImpactTimer>.2&&Math.hypot(vel.x,vel.z)>9){venomThrowImpactTimer=0;vel.multiplyScalar(.16);invuln=0;hurt(35);say('BUILDING IMPACT!','Venom threw you into the building! -35 health',1.6)}}}
+
+ player.rotation.y=yaw;
+ const actualHorizontalSpeed=Math.hypot(vel.x,vel.z);
+ updatePlayerAnimation(dt,wallClimbing?wallMoveAmount*2.8:(swingAttached?1.6:actualHorizontalSpeed),sprint);
+ const look=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
+ camera.position.lerp(player.position.clone().add(new THREE.Vector3(0,3.2,0)).sub(look.clone().multiplyScalar(8)),1-Math.pow(.001,dt));
+ camera.lookAt(player.position.clone().add(new THREE.Vector3(0,2.3,0)).add(look.multiplyScalar(5)));
+ if(webLine&&swingAttached&&webAnchor)webLine.geometry.setFromPoints([player.position.clone().add(new THREE.Vector3(0,2.4,0)),webAnchor]);
+ else if(webLine&&zip&&webTarget)webLine.geometry.setFromPoints([player.position.clone().add(new THREE.Vector3(0,2.4,0)),webTarget]);
+ energy=Math.min(100,energy+dt*5);invuln=Math.max(0,invuln-dt);attackCooldown=Math.max(0,attackCooldown-dt);
+ damageQuiet+=dt;if(damageQuiet>=5&&health<300)health=Math.min(300,health+dt*18);
+ updateEnemies(dt);
+ $('hn').textContent=Math.max(0,Math.ceil(health));$('hp').style.width=Math.max(0,health/300*100)+'%';$('wn').textContent=Math.round(energy);$('wp').style.width=energy+'%';$('en').textContent=enemies.length;updateBossBar();
+ const objectives={1:'Origin story · Press E to begin',2:'Clear the street bandits',3:'Stop the bank robbery',4:'Chase Green Goblin and save MJ',5:'Chase Goblin · fight bandits on the way',6:'Chase Goblin · fight bandits on the way',7:'Chase Goblin · fight bandits on the way',8:'Chase Goblin · fight bandits on the way',9:'Catch Green Goblin · '+Math.max(0,Math.ceil(missionTimer))+' seconds left',10:'Four villain waves · Goblin → Kingpin → Doc Ock → Venom'};
+ $('mission').innerHTML='DAY '+day+' · LEVEL '+level+'<br>'+objectives[level];
+ if(say.time>0){say.time-=dt;if(say.time<=0)$('msg').innerHTML=''}
+}
+$('start').addEventListener('click',()=>{$('menu').style.display='none';started=true;introSetup();});
+$('retry').addEventListener('click',retryGame);
+document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===renderer.domElement);
+renderer.domElement.addEventListener('click',()=>{if(started&&!introActive&&!endingActive&&!locked)renderer.domElement.requestPointerLock()});
+document.addEventListener('mousemove',e=>{if(locked){yaw-=e.movementX*.0022;pitch=Math.max(-.95,Math.min(.55,pitch-e.movementY*.0018))}});
+document.addEventListener('keydown',e=>{if(introActive||endingActive){if(e.code==='Escape'||e.code==='KeyX')skipCutscene();return}if(e.code==='Space'){e.preventDefault();keys.Space=true;if(!e.repeat)handleSpacePress();return}keys[e.code]=true;if(e.code==='KeyF')attack();if(e.code==='KeyE'){if(level===1&&stage===0){startLevel(2)}else if(stage===2){if(level<10)nextLevel();else{say('THANK YOU, HERO!','Spider-Man: City saved.',999)}}}if(e.code==='KeyQ')attack();if(e.code==='KeyG'&&level>=4){gliding=!gliding;$('glider').style.display=gliding?'block':'none';say(gliding?'GLIDER DEPLOYED':'GLIDER FOLDED',gliding?'Hold Space while falling to glide farther.':'Web-pull to travel faster.',1.5)}});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousedown',e=>{if(!started||introActive||endingActive)return;if(!locked){renderer.domElement.requestPointerLock();return}if(e.button===2){e.preventDefault();webHeld=true;webPull()}else if(e.button===0)attack()});
+document.addEventListener('mouseup',e=>{if(e.button===2)releaseWebSwing()});
+window.addEventListener('blur',()=>{if(swingAttached)releaseWebSwing()});
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05);if(introActive)updateIntro(dt);else if(endingActive)updateEnding(dt);else if(started)update(dt);renderer.render(scene,camera)}
+loop();addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,1.0))});
+}
+</script></body></html>
