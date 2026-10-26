@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Spider-Man: City Chase</title>
+<title>Spider-Man: City Chase — Rooftop Choice & Character Fix</title>
 <style>
 *{box-sizing:border-box}body{margin:0;overflow:hidden;background:#07111e;color:#fff;font:14px system-ui}canvas{display:block}
 #hud{position:fixed;inset:0;pointer-events:none}#brand{position:absolute;top:12px;left:16px;font-weight:1000;font-size:28px;letter-spacing:2px;text-shadow:0 2px 12px #000}#brand span{color:#ff345c}
@@ -24,6 +24,20 @@
 #skipCutscene{position:absolute;top:11%;right:3%;pointer-events:auto;padding:10px 15px;background:#0a182bd9;border:1px solid #84e7ff99;border-radius:8px;font-size:12px;letter-spacing:.08em}
 #cutsceneFlash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none}
 #cutsceneFlash.pop{animation:csflash .8s ease-out}
+
+#endingChoices{position:absolute;inset:0;z-index:4;display:none;align-items:center;justify-content:center;pointer-events:none}
+#endingChoiceCard{pointer-events:auto;width:min(480px,88vw);padding:22px;background:linear-gradient(135deg,#071321f5,#172d46f5);border:1px solid #80eaffaa;border-radius:16px;box-shadow:0 14px 48px #000b;text-align:center}
+#endingChoiceCard h2{margin:0 0 8px;font-size:clamp(20px,3vw,29px);letter-spacing:.04em}
+#endingChoiceCard p{margin:0 0 16px;color:#dbeaf7}
+#endingChoiceButtons{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+#endingChoiceButtons button{min-width:175px;padding:13px 16px;font-size:15px}
+#choiceKiss{background:linear-gradient(100deg,#c92458,#ff6a72)}
+#choiceGo{background:linear-gradient(100deg,#176e98,#268fba)}
+@media(max-width:520px){#endingChoiceButtons{flex-direction:column}#endingChoiceButtons button{width:100%}}
+#callPanel{position:fixed;z-index:4;top:18%;left:50%;transform:translateX(-50%);width:min(560px,88vw);text-align:center;display:none;border:1px solid #79dfff99;box-shadow:0 10px 35px #0008;background:linear-gradient(110deg,#071523f2,#132e46f2);animation:callPulse 1.4s ease-in-out infinite alternate}
+#callTitle{font-size:12px;letter-spacing:.18em;font-weight:1000;color:#8de9ff;margin-bottom:7px}
+#callLine{font-size:clamp(14px,1.8vw,20px);line-height:1.4;font-weight:650}
+@keyframes callPulse{from{border-color:#79dfff55}to{border-color:#79dfffee;box-shadow:0 10px 35px #00bfff2a}}
 @keyframes csflash{0%{opacity:0}22%{opacity:.95}100%{opacity:0}}
 @media(max-width:650px){#csDialogue{bottom:11%;padding:12px 14px}#csKicker{top:10%;letter-spacing:.16em}#skipCutscene{top:17%;right:3%;padding:8px 10px}}
 
@@ -31,7 +45,7 @@
 <div id="hud"><div id="brand">SPIDER-<span>MAN</span></div><div id="mission" class="panel">LEVEL 1 · ORIGIN<br>Discover your powers.</div>
 <div id="bossPanel" class="panel"><div id="bossName">BOSS</div><div class="bar"><div id="bossFill" class="fill"></div></div><div id="bossNums">300 / 300</div></div>
 <div id="stats" class="panel">SPIDER-MAN · HEALTH <b id="hn">300</b> / 300<div class="bar"><div id="hp" class="fill"></div></div>HEALTH REGEN: starts after 5 seconds without damage<br>WEB ENERGY <b id="wn">100</b><div class="bar"><div id="wp" class="fill" style="background:linear-gradient(90deg,#12c9ff,#a4f7ff)"></div></div>Enemies: <b id="en">0</b></div>
-<div id="msg"></div><div id="crosshair">+</div><div id="sense">⚠ SPIDER-SENSE ⚠</div><div id="glider" style="display:none;position:absolute;top:27%;left:50%;transform:translateX(-50%);font-weight:900;color:#b8f4ff;text-shadow:0 0 12px #00aaff">GLIDER DEPLOYED · G TOGGLE</div>
+<div id="msg"></div><div id="crosshair">+</div><div id="sense">⚠ SPIDER-SENSE ⚠</div><div id="callPanel" class="panel"><div id="callTitle">📞 INCOMING CALL · GWEN STACY</div><div id="callLine"></div></div><div id="glider" style="display:none;position:absolute;top:27%;left:50%;transform:translateX(-50%);font-weight:900;color:#b8f4ff;text-shadow:0 0 12px #00aaff">GLIDER DEPLOYED · G TOGGLE</div>
 <div id="help" class="panel"><b>CONTROLS</b><br><kbd>W A S D</kbd> move · Mouse look · <kbd>Space</kbd> jump / double-tap backflip<br><kbd>Shift</kbd> run / swing boost · <kbd>G</kbd> glider (Level 4+) · <kbd>Left Click</kbd> attack<br><kbd>Hold Right Click</kbd> swing · release to launch · walk into a wall to crawl · <kbd>F</kbd> punch · <kbd>E</kbd> continue</div></div>
 <div id="finish" style="position:fixed;inset:0;z-index:6;display:none;align-items:flex-end;justify-content:center;background:#02081799"><div id="finishCard" style="width:100%;padding:34px 20px 42px;text-align:center;background:linear-gradient(135deg,#0a1930f5,#1e3150f5);border-top:2px solid #6fe8ff;transform:translateY(100%);transition:transform .8s cubic-bezier(.2,.8,.2,1);border-radius:24px 24px 0 0"><h1>SPIDER-MAN SAVED THE CITY!</h1><p style="font-size:20px">YOUR FRIENDLY NEIGHBORHOOD HERO 🕷️❤️</p><button id="retry">RETRY</button></div></div>
 <div id="cutscene" aria-live="polite">
@@ -40,9 +54,19 @@
   <div id="csDialogue"><div id="csSpeaker">NARRATOR</div><div id="csLine">Every hero has a beginning.</div></div>
   <button id="skipCutscene">SKIP CUTSCENE »</button>
   <div id="cutsceneFlash"></div>
+  <div id="endingChoices">
+    <div id="endingChoiceCard">
+      <h2>YOUR CHOICE</h2>
+      <p>Peter and Gwen are alone together on the rooftop. What should Spider-Man do?</p>
+      <div id="endingChoiceButtons">
+        <button id="choiceKiss">A · Kiss Gwen ❤️</button>
+        <button id="choiceGo">B · Say goodbye & go patrol 🕸️</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="menu"><div class="card"><h1>SPIDER-<span>MAN</span></h1><p><b>City Chase — 10-level story update</b></p><p>Swing between buildings, chase Green Goblin to save MJ, fight bandits along the rooftops, then face Green Goblin, Kingpin, Doc Ock and Venom in a four-wave finale.</p><p><b>Tip:</b> Aim at a building and hold right-click to swing from a fixed web point. Hold Shift while swinging for a speed boost. Walk into a wall and keep pressing W to crawl up it. Space jumps off walls; double-tap Space for a higher backflip. Left-click or press F to punch.</p><p class="small">Character style: articulated mannequins with smooth plastic surfaces, blank faces, and visible joints. Internet is needed to load Three.js.</p><button id="start">START GAME</button></div></div>
+<div id="menu"><div class="card"><h1>SPIDER-<span>MAN</span></h1><p><b>City Chase — 10-level story update</b></p><p>Swing between buildings, chase Green Goblin to save MJ, fight bandits along the rooftops, then face Green Goblin, Kingpin, Doc Ock and Venom in a four-wave finale.</p><p><b>Tip:</b> Aim at a building and hold right-click to swing from a fixed web point. Hold Shift while swinging for a speed boost. Walk into a wall and keep pressing W to crawl up it. Space jumps off walls; double-tap Space for a higher backflip. Left-click or press F to punch.</p><p class="small">Stylized mannequin characters and a modern open-world city with varied facades, street lights and parked cars. Internet is needed to load Three.js.</p><button id="start">START GAME</button></div></div>
 <script>
 (function loadThree(){
  const sources=['https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js','https://cdnjs.cloudflare.com/ajax/libs/three.js/r152/three.min.js'];
@@ -87,6 +111,41 @@ for(let x=-270;x<=270;x+=42)for(let z=-270;z<=270;z+=42){if(Math.abs(x)<20&&Math
  let win=mat(0x7ccbe9,.25,.2);win.emissive=new THREE.Color(0x17425b);win.emissiveIntensity=.5;for(let y=6;y<h-2;y+=9)for(let xx=-w/2+3;xx<w/2-1;xx+=6)if(Math.random()>.45){let ww=mesh(new THREE.BoxGeometry(1.4,1.4,.07),Math.random()<.15?gold:win);ww.position.set(x+xx,y,z+d/2+.06);ww.castShadow=false}}
 const lineMat=mat(0xe6dba4);
 for(let i=-420;i<=420;i+=48){box(.13,.03,840,lineMat,i,-.16,0);box(840,.03,.13,lineMat,0,-.16,i)}
+// A few side-facing office windows and facade bands create a more believable modern open-world skyline.
+const sideWindowBase=mat(0x78b8d7,.28,.18);sideWindowBase.emissive=new THREE.Color(0x102d40);sideWindowBase.emissiveIntensity=.28;
+const floorBandMat=mat(0x9aa6ae,.65,.12);
+for(const b of buildings){
+ const u=b.userData;
+ if(Math.random()<.24){
+  for(let yy=9;yy<u.h-3;yy+=11){
+   if(Math.random()<.38){const band=mesh(new THREE.BoxGeometry(u.w+.12,.075,u.d+.12),floorBandMat);band.position.set(u.x,yy,u.z);band.castShadow=false;}
+  }
+  for(let yy=7;yy<u.h-3;yy+=9){
+   for(let zz=-u.d/2+3;zz<u.d/2-1;zz+=5.8){
+    if(Math.random()<.5){const win=mesh(new THREE.BoxGeometry(1.35,1.45,.07),sideWindowBase);win.position.set(u.x+u.w/2+.055,yy,u.z+zz);win.rotation.y=Math.PI/2;win.castShadow=false;}
+   }
+  }
+ }
+}
+// Low-poly parked traffic gives the streets the feel of a contemporary open-world city.
+function addParkedCar(x,z,color,rot=0){
+ const g=new THREE.Group();scene.add(g);g.position.set(x,0,z);g.rotation.y=rot;
+ const paint=mat(color,.34,.26),glass=mat(0x203b4b,.22,.42),rubber=mat(0x17191d,.82,.02),lamp=mat(0xffe4a8,.25,.05),tail=mat(0xe33a2f,.3,.05);
+ const body=mesh(new THREE.BoxGeometry(2.05,.58,4.15),paint,g);body.position.y=.66;
+ const hood=mesh(new THREE.BoxGeometry(1.93,.22,1.1),paint,g);hood.position.set(0,.91,1.35);
+ const cabin=mesh(new THREE.BoxGeometry(1.48,.62,1.88),paint,g);cabin.position.set(0,1.18,-.12);
+ const windshield=mesh(new THREE.BoxGeometry(1.39,.44,.055),glass,g);windshield.position.set(0,1.2,.84);windshield.rotation.x=-.15;
+ const rearGlass=mesh(new THREE.BoxGeometry(1.36,.42,.055),glass,g);rearGlass.position.set(0,1.2,-1.05);rearGlass.rotation.x=.16;
+ for(const sx of [-1,1])for(const zz of [-1.36,1.36]){const wheel=mesh(new THREE.CylinderGeometry(.31,.31,.18,12),rubber,g);wheel.rotation.z=Math.PI/2;wheel.position.set(sx*1.02,.39,zz);}
+ for(const sx of [-1,1]){const light=mesh(new THREE.BoxGeometry(.28,.14,.045),lamp,g);light.position.set(sx*.67,.69,2.09);const rear=mesh(new THREE.BoxGeometry(.27,.14,.045),tail,g);rear.position.set(sx*.67,.69,-2.09);}
+ return g;
+}
+[
+ [-249,-165,0xc6453f],[-207,87,0xd7d9dc],[-165,213,0x293645],[-123,-39,0x2b648d],
+ [-81,171,0xb6b9b4],[45,-207,0x555d65],[87,129,0xb63e31],[129,-123,0xe0ded5],
+ [171,45,0x343940],[213,255,0x64786f],[-39,-249,0x9da5ad],[255,-81,0x424e59]
+].forEach(([x,z,c],i)=>addParkedCar(x,z,c,i%2?Math.PI/2:0));
+
 // Street lamps and intersection light pools make the city feel less like bare test geometry.
 for(let lx=-210;lx<=210;lx+=84)for(let lz=-210;lz<=210;lz+=84){
  const pole=mesh(new THREE.CylinderGeometry(.075,.12,5.4,7),streetMetal);pole.position.set(lx+18,2.7,lz+18);
@@ -99,33 +158,54 @@ for(let i=-4;i<=4;i++){box(1.1,.025,5.5,white,i*1.6,-.145,15);box(1.1,.025,5.5,w
 // Player character: articulated mannequin body with smooth plastic-like surfaces.
 const player=new THREE.Group();scene.add(player);
 const civilianTop=mat(0x43516b,.38,.04),civilianBottom=mat(0x202a39,.42,.04),skinMat=mat(0xc99775,.36,.03),hairMat=mat(0x201a20,.48,.03);
-const torso=mesh(new THREE.CapsuleGeometry(.48,.92,8,16),red,player);torso.position.y=2.15;
-const pelvis=mesh(new THREE.CapsuleGeometry(.37,.26,6,12),blue,player);pelvis.scale.set(1.06,1,0.78);pelvis.position.y=1.45;
-const neck=mesh(new THREE.CylinderGeometry(.13,.16,.24,14),red,player);neck.position.y=2.63;
-const head=mesh(new THREE.SphereGeometry(.39,24,18),red,player);head.scale.set(1,.99,.94);head.position.set(0,3.05,0);
-const hairCap=mesh(new THREE.SphereGeometry(.34,16,12),hairMat,player);hairCap.scale.set(1.03,.58,1.02);hairCap.position.set(0,3.31,-.035);hairCap.visible=false;
+const torsoPivotY=1.78;
+const playerTorsoProfile=[[.195,1.02],[.225,1.12],[.245,1.28],[.235,1.43],[.232,1.58],[.285,1.75],[.345,1.94],[.365,2.09],[.335,2.23],[.265,2.38],[.155,2.53]].map(([r,y])=>new THREE.Vector2(r,y-torsoPivotY)); // centered on its own pivot: flat, athletic masculine chest with no breast-like contours
+const torso=mesh(new THREE.LatheGeometry(playerTorsoProfile,24),red,player);torso.position.y=torsoPivotY;
+const pelvis=mesh(new THREE.CapsuleGeometry(.275,.26,7,14),blue,player);pelvis.scale.set(1.02,1,.78);pelvis.position.y=1.34;
+const neck=mesh(new THREE.CylinderGeometry(.105,.135,.23,14),red,player);neck.position.y=2.63;
+const head=mesh(new THREE.SphereGeometry(.315,24,18),red,player);head.scale.set(1,.99,.94);head.position.set(0,3.02,0);
+const hairCap=mesh(new THREE.SphereGeometry(.29,16,12),hairMat,player);hairCap.scale.set(1.04,.60,1.02);hairCap.position.set(0,3.27,-.028);hairCap.visible=false;
 const eyeMeshes=[],arms=[],legs=[],feet=[],playerJoints=[];
 function addPlayerJoint(radius,suitMaterial,civilianMaterial,x,y,z,sx=radius,sy=radius,sz=radius){const joint=mannequinJoint(player,suitMaterial,x,y,z,sx,sy,sz);playerJoints.push({joint,suitMaterial,civilianMaterial});return joint}
 for(const sideSign of [-1,1]){
-  let eye=mesh(new THREE.SphereGeometry(.13,16,12),white,player);eye.scale.set(.75,1.25,.35);eye.position.set(sideSign*.17,3.1,.34);eye.rotation.z=-sideSign*.25;eyeMeshes.push(eye);
-  let arm=mesh(new THREE.CapsuleGeometry(.16,.74,6,12),red,player);arm.position.set(sideSign*.62,2.15,0);arm.rotation.z=-sideSign*.12;arms.push(arm);
-  let leg=mesh(new THREE.CapsuleGeometry(.2,.8,6,12),blue,player);leg.position.set(sideSign*.24,.76,0);legs.push(leg);
-  // Rounded shoulder, elbow, wrist, hip, knee, and ankle joints create the mannequin silhouette.
-  addPlayerJoint(.17,red,civilianTop,sideSign*.53,2.49,0,.17,.18,.17);
-  addPlayerJoint(.125,red,civilianTop,sideSign*.64,2.10,0,.13,.13,.13);
-  addPlayerJoint(.105,red,civilianTop,sideSign*.63,1.72,.015,.11,.11,.11);
-  addPlayerJoint(.145,blue,civilianBottom,sideSign*.235,1.27,0,.15,.14,.15);
-  addPlayerJoint(.13,blue,civilianBottom,sideSign*.24,.51,0,.14,.13,.14);
-  addPlayerJoint(.095,blue,civilianBottom,sideSign*.24,.18,0,.105,.10,.11);
-  const foot=mesh(new THREE.CapsuleGeometry(.105,.22,4,8),blue,player);foot.rotation.x=Math.PI/2;foot.position.set(sideSign*.24,.105,.13);feet.push(foot);
+  let eye=mesh(new THREE.SphereGeometry(.105,16,12),white,player);eye.scale.set(.75,1.2,.35);eye.position.set(sideSign*.135,3.045,.282);eye.rotation.z=-sideSign*.22;eyeMeshes.push(eye);
+  let arm=mesh(new THREE.CapsuleGeometry(.135,.76,7,12),red,player);arm.position.set(sideSign*.50,1.99,0);arm.rotation.z=-sideSign*.08;arms.push(arm);
+  let leg=mesh(new THREE.CapsuleGeometry(.16,.78,7,12),blue,player);leg.position.set(sideSign*.215,.74,0);legs.push(leg);
+  // Rounded mannequin joints follow the lean anatomical proportions in the reference.
+  addPlayerJoint(.145,red,civilianTop,sideSign*.425,2.34,0,.145,.15,.14);
+  addPlayerJoint(.105,red,civilianTop,sideSign*.505,1.99,0,.11,.11,.10);
+  addPlayerJoint(.09,red,civilianTop,sideSign*.50,1.62,.015,.095,.095,.09);
+  addPlayerJoint(.125,blue,civilianBottom,sideSign*.21,1.23,0,.13,.13,.12);
+  addPlayerJoint(.115,blue,civilianBottom,sideSign*.215,.50,0,.12,.12,.11);
+  addPlayerJoint(.085,blue,civilianBottom,sideSign*.215,.17,0,.095,.09,.10);
+  const foot=mesh(new THREE.CapsuleGeometry(.095,.23,5,9),blue,player);foot.rotation.x=Math.PI/2;foot.position.set(sideSign*.215,.105,.12);feet.push(foot);
 }
-let emblem=mesh(new THREE.SphereGeometry(.1,12,8),dark,player);emblem.scale.set(.5,1.8,.3);emblem.position.set(0,2.25,.46);emblem.visible=false;
+let emblem=mesh(new THREE.SphereGeometry(.1,12,8),dark,player);emblem.scale.set(.5,1.8,.3);emblem.position.set(0,2.22,.405);emblem.visible=false;
 const spiderLogo=new THREE.Group();player.add(spiderLogo);const logoMat=mat(0xdce7ef,.31,.22);
-const logoBody=mesh(new THREE.CapsuleGeometry(.055,.34,4,7),logoMat,spiderLogo);logoBody.position.set(0,2.28,.49);
+const logoBody=mesh(new THREE.CapsuleGeometry(.045,.30,4,7),logoMat,spiderLogo);logoBody.position.set(0,2.19,.405);
 for(const sideSign of [-1,1])for(let i=0;i<3;i++){
- const legPiece=mesh(new THREE.CapsuleGeometry(.025,.24,3,5),logoMat,spiderLogo);
- legPiece.position.set(sideSign*(.10+i*.035),2.34-i*.16,.49);legPiece.rotation.z=sideSign*(.65+i*.12);
+ const legPiece=mesh(new THREE.CapsuleGeometry(.022,.21,3,5),logoMat,spiderLogo);
+ legPiece.position.set(sideSign*(.085+i*.03),2.25-i*.14,.405);legPiece.rotation.z=sideSign*(.65+i*.12);
 }
+// Wing membranes and web ribs inspired by the extended underarm glider in the reference image.
+const gliderRig=new THREE.Group();player.add(gliderRig);gliderRig.visible=false;
+const gliderFabric=new THREE.MeshStandardMaterial({color:0x183947,roughness:.62,metalness:.04,transparent:true,opacity:.72,side:THREE.DoubleSide,depthWrite:false});
+const gliderRibMaterial=new THREE.LineBasicMaterial({color:0x9fc6d1,transparent:true,opacity:.9});
+function addGliderTriangle(points){
+ const geometry=new THREE.BufferGeometry();
+ geometry.setAttribute('position',new THREE.Float32BufferAttribute(points.flat(),3));
+ geometry.setIndex([0,1,2]);geometry.computeVertexNormals();
+ const panel=new THREE.Mesh(geometry,gliderFabric);panel.renderOrder=2;gliderRig.add(panel);
+ const edgePoints=[...points,points[0]];
+ const edgeGeo=new THREE.BufferGeometry().setFromPoints(edgePoints.map(p=>new THREE.Vector3(p[0],p[1],p[2]+.012)));
+ const edges=new THREE.Line(edgeGeo,gliderRibMaterial);edges.renderOrder=3;gliderRig.add(edges);
+ for(let i=1;i<3;i++){
+  const ribGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(points[0][0],points[0][1],points[0][2]+.02),new THREE.Vector3(points[i][0],points[i][1],points[i][2]+.02)]);
+  const rib=new THREE.Line(ribGeo,gliderRibMaterial);rib.renderOrder=3;gliderRig.add(rib);
+ }
+}
+addGliderTriangle([[-.43,2.32,.06],[-1.42,2.04,.13],[-.24,1.39,.04]]);
+addGliderTriangle([[.43,2.32,.06],[1.42,2.04,.13],[.24,1.39,.04]]);
 function setMaskMode(masked){
   head.material=masked?red:skinMat;
   hairCap.visible=!masked;
@@ -136,9 +216,17 @@ function setSuitMode(suited){
   emblem.visible=false;spiderLogo.visible=suited;
   for(const arm of arms)arm.material=suited?red:civilianTop;
   for(const leg of legs)leg.material=suited?blue:civilianBottom;
-  for(const foot of feet)foot.material=suited?blue:civilianBottom;
+  for(const foot of feet)foot.material=suited?blue:dark;
   for(const part of playerJoints)part.joint.material=suited?part.suitMaterial:part.civilianMaterial;
   setMaskMode(suited);
+}
+function setSuitRemovedMode(){
+  // Peter removes the superhero suit but stays dressed in a casual shirt, trousers and shoes.
+  // Never switch the whole mannequin to bare skin for the rooftop scene.
+  setSuitMode(false);
+  setMaskMode(false);
+  emblem.visible=false;
+  spiderLogo.visible=false;
 }
 setSuitMode(true);
 const raycaster=new THREE.Raycaster(),mouse=new THREE.Vector2(0,0),keys={},enemies=[],bombs=[];let yaw=0,pitch=-.1,started=false,locked=false,level=1,stage=0,wave=0,health=300,energy=100,vy=0,ground=true,invuln=0,webLine=null,webTarget=null,zip=false,boss=null,missionTimer=0,greenGoblin=null,mj=null,day=1,lastSense=0,attackCooldown=0,storyReady=false,gliding=false,damageQuiet=0,voiceEnabled=false,webHeld=false,swingAttached=false,webAnchor=null,webAnchorBuilding=null,selectedBuilding=null,ropeLength=0,swingReleaseTimer=0;
@@ -146,9 +234,22 @@ const clock=new THREE.Clock(),vel=new THREE.Vector3();
 let introActive=false,endingActive=false,cutsceneData=null,csLastLine='',cutsceneVoiceEnabled=true,mjCutsceneActor=null,endingRoof=null;
 let wallClimbing=false,wallBuilding=null,wallNormal=null,wallMoveAmount=0;
 let lastSpaceTap=0,doubleJumpUsed=false,backflipTime=0,gaitTime=0,punchAnim=0,punchSide=0,attackSide=0,walkBob=0;
-let crowdGroup=null,crowdActors=[],gwenActor=null,jonahActor=null,micProp=null,venomThrowImpactTimer=0,senseFlashTimer=0,privatePlaceProps=[];
+let crowdGroup=null,crowdActors=[],gwenActor=null,jonahActor=null,micProp=null,venomThrowImpactTimer=0,senseFlashTimer=0,privatePlaceProps=[],phoneCallTimer=null;
+let rooftopProps=[];
 function say(a,b='',t=3.2){$('msg').innerHTML=a+(b?'<div id="sub">'+b+'</div>':'');say.time=t;
 if(voiceEnabled&&('speechSynthesis' in window)){try{speechSynthesis.cancel();const utter=new SpeechSynthesisUtterance((a+' . '+b).replace(/<[^>]*>/g,''));utter.rate=.98;utter.pitch=.95;utter.volume=.85;speechSynthesis.speak(utter)}catch(e){}}
+}
+function speakGwenPhoneCall(){
+ const line='Come fast, Spider-Man is going to arrive. We have to make a speech for Spider.';
+ const panel=$('callPanel'),lineNode=$('callLine');
+ if(panel&&lineNode){lineNode.textContent='“'+line+'”';panel.style.display='block';if(phoneCallTimer)clearTimeout(phoneCallTimer);phoneCallTimer=setTimeout(()=>{panel.style.display='none'},9500)}
+ if(!('speechSynthesis' in window))return;
+ try{
+  speechSynthesis.cancel();
+  const voices=speechSynthesis.getVoices();
+  const voice=voices.find(v=>/^en/i.test(v.lang)&&/(female|samantha|victoria|zira|aria|jenny|susan|karen|hazel|ava)/i.test(v.name))||voices.find(v=>/^en/i.test(v.lang));
+  const utter=new SpeechSynthesisUtterance(line);if(voice)utter.voice=voice;utter.rate=.95;utter.pitch=1.13;utter.volume=.95;speechSynthesis.speak(utter);
+ }catch(e){}
 }
 function clearEnemies(){for(const e of [...enemies])removeEnemy(e);boss=null;greenGoblin=null}
 function makePerson(type,x,z,hp){
@@ -157,7 +258,7 @@ function makePerson(type,x,z,hp){
  let skin=mat(type==='greenGoblin'?0x65a957:type==='venom'?0x1b1d25:0xc9a080,.35,.03);
  let big=['kingpin','docock','venom'].includes(type);
  // Smooth display-mannequin torsos for human-sized male characters; the larger bosses keep their oversized silhouettes.
- const maleTorsoProfile=[[.17,.56],[.22,.68],[.29,.84],[.26,1.02],[.23,1.18],[.27,1.34],[.34,1.50],[.31,1.62],[.18,1.79],[.12,1.88]].map(([r,y])=>new THREE.Vector2(r,y));
+ const maleTorsoProfile=[[.19,.56],[.235,.68],[.29,.84],[.265,1.02],[.255,1.18],[.325,1.34],[.385,1.50],[.415,1.62],[.235,1.79],[.13,1.88]].map(([r,y])=>new THREE.Vector2(r,y)); // broader adult male shoulders, flat chest and tapered waist
  const body=mesh(big?new THREE.CapsuleGeometry(.62,1.05,8,14):new THREE.LatheGeometry(maleTorsoProfile,20),bodyMat,g);
  if(big)body.position.y=1.6;
  const head=mesh(new THREE.SphereGeometry(big?.4:.29,18,14),skin,g);head.position.y=big?2.55:2.1;
@@ -165,12 +266,12 @@ function makePerson(type,x,z,hp){
  const enemyArms=[],enemyLegs=[],docTentacleLines=[],mannequinJoints=[];
  function addEnemyJoint(material,x,y,z,sx,sy=sx,sz=sx){const j=mannequinJoint(g,material,x,y,z,sx,sy,sz);mannequinJoints.push(j);return j}
  for(let sideSign of [-1,1]){
-  const arm=mesh(new THREE.CapsuleGeometry(big?.18:.15,big?.78:.65,6,10),bodyMat,g);
-  arm.position.set(sideSign*(big?.58:.43),big?1.65:1.45,0);enemyArms.push(arm);
-  const leg=mesh(new THREE.CapsuleGeometry(big?.18:.16,big?.66:.58,6,10),dark,g);
+  const arm=mesh(new THREE.CapsuleGeometry(big?.20:.17,big?.80:.72,7,12),bodyMat,g);
+  arm.position.set(sideSign*(big?.60:.455),big?1.65:1.46,0);enemyArms.push(arm);
+  const leg=mesh(new THREE.CapsuleGeometry(big?.19:.17,big?.68:.62,7,12),dark,g);
   leg.position.set(sideSign*.22,.45,0);enemyLegs.push(leg);
-  addEnemyJoint(bodyMat,sideSign*(big?.54:.40),big?2.00:1.78,0,big?.20:.15,big?.18:.15,big?.16:.14);
-  addEnemyJoint(bodyMat,sideSign*(big?.60:.44),big?1.48:1.34,.005,big?.15:.115,big?.15:.115,big?.14:.11);
+  addEnemyJoint(bodyMat,sideSign*(big?.56:.425),big?2.00:1.79,0,big?.21:.17,big?.19:.16,big?.17:.15);
+  addEnemyJoint(bodyMat,sideSign*(big?.62:.465),big?1.48:1.35,.005,big?.16:.13,big?.15:.13,big?.14:.12);
   addEnemyJoint(bodyMat,sideSign*(big?.59:.43),big?1.15:1.02,.02,big?.125:.095,big?.13:.10,big?.12:.095);
   addEnemyJoint(bodyMat,sideSign*.22,big?1.08:.87,0,big?.17:.12,big?.15:.12,big?.16:.12);
   addEnemyJoint(dark,sideSign*.22,.47,0,big?.15:.11,big?.14:.105,big?.14:.11);
@@ -196,7 +297,9 @@ function makePerson(type,x,z,hp){
   for(let i=0;i<5;i++){const tooth=mesh(new THREE.ConeGeometry(.05,.14,4),mat(0xf5f6f7,.25,.02),g);tooth.position.set(-.19+i*.095,2.22,.42);}
   for(let i=0;i<5;i++){const tendril=mesh(new THREE.CapsuleGeometry(.075,.75+Math.random()*.55,4,6),mat(0x10161d,.26,.12),g);tendril.position.set((i-2)*.23,1.75,-.48);tendril.rotation.z=(i-2)*.32;tendril.rotation.x=-.3;}
  }
- if(type==='bandit'){let weapon=mesh(new THREE.BoxGeometry(.4,.12,.14),dark,g);weapon.position.set(.55,1.45,.2)}
+ if(type==='bandit'){let weapon=mesh(new THREE.BoxGeometry(.4,.12,.14),dark,g);weapon.position.set(.58,1.47,.2)}
+ if(type==='greenGoblin')g.scale.setScalar(1.06);
+ if(type==='bandit')g.scale.setScalar(1.035);
  if(type==='venom')g.scale.setScalar(2.05);
  g.userData={type,hp,maxHp:hp,speed:type==='kingpin'?2.4:type==='venom'?2.7:type==='bandit'?4.1:2.7,cd:2,attackClock:0,alive:true,arms:enemyArms,legs:enemyLegs,gait:Math.random()*6.28,docTentacleLines,docAttackTimer:type==='docock'?15:0,docAttack:null,venomFightTime:0,venomThrow:null,mannequinJoints};
  enemies.push(g);return g;
@@ -210,7 +313,7 @@ function regen(){health=300;invuln=1;damageQuiet=0}
 function showFinish(){ $('finish').style.display='flex';requestAnimationFrame(()=>{$('finishCard').style.transform='translateY(0)'}) }
 function retryGame(){location.reload()}
 function csShow(){ $('cutscene').style.display='block'; $('hud').style.visibility='hidden'; if(document.pointerLockElement&&document.exitPointerLock)document.exitPointerLock(); }
-function csHide(){ $('cutscene').style.display='none'; $('hud').style.visibility='visible'; if('speechSynthesis' in window){try{speechSynthesis.cancel()}catch(e){}} }
+function csHide(){ $('cutscene').style.display='none'; $('endingChoices').style.display='none'; $('hud').style.visibility='visible'; if('speechSynthesis' in window){try{speechSynthesis.cancel()}catch(e){}} }
 function csLine(key,kicker,speaker,line){
   if(csLastLine===key)return;
   csLastLine=key;
@@ -271,11 +374,24 @@ function createSpider(){
 }
 const biteSpider=createSpider();
 function introSetup(){
-  introActive=true;endingActive=false;started=true;cutsceneData={time:0};csLastLine='';wallClimbing=false;wallBuilding=null;wallNormal=null;swingAttached=false;webHeld=false;csShow();
-  clearEnemies();setSuitMode(false);player.position.set(0,0,0);player.rotation.set(0,0,0);player.scale.setScalar(1);vel.set(0,0,0);yaw=0;pitch=-.1;
+  // A short hero arrival plays immediately after Start Game, before the origin-story cutscene.
+  introActive=true;endingActive=false;started=true;cutsceneData={time:0,phase:'hero-arrival'};csLastLine='';wallClimbing=false;wallBuilding=null;wallNormal=null;swingAttached=false;webHeld=false;csShow();
+  clearEnemies();setSuitMode(true);setMaskMode(true);player.position.set(-12,12,11);player.rotation.set(0,-.72,0);player.scale.setScalar(1);vel.set(0,0,0);yaw=-.72;pitch=-.1;
+  biteSpider.visible=false;if(webLine)webLine.visible=false;zip=false;gliding=false;gliderRig.visible=false;
+  const first=buildings.find(b=>b.userData.x===24&&b.userData.z===24)||buildings.reduce((best,b)=>Math.hypot(b.userData.x,b.userData.z)<Math.hypot(best.userData.x,best.userData.z)?b:best,buildings[0]);
+  const u=first.userData;cutsceneData.arrivalStart=new THREE.Vector3(-12,12,11);cutsceneData.arrivalAnchor=new THREE.Vector3(u.x,Math.max(10,u.h*.65),u.z);
+  if(!webLine){webLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xe8fbff}));scene.add(webLine)}
+  webLine.visible=true;webLine.geometry.setFromPoints([player.position.clone().add(new THREE.Vector3(0,2.4,0)),cutsceneData.arrivalAnchor]);
+  camera.position.set(-5,17,22);camera.lookAt(0,3,0);
+  csLine('hero-arrival','SPIDER-MAN: CITY CHASE','NARRATOR','A hero swings into the city.');
+}
+function beginOriginCutscene(){
+  introActive=true;endingActive=false;started=true;cutsceneData={time:0,phase:'origin'};csLastLine='';wallClimbing=false;wallBuilding=null;wallNormal=null;swingAttached=false;webHeld=false;csShow();
+  clearEnemies();setSuitMode(false);setMaskMode(false);player.position.set(0,0,0);player.rotation.set(0,0,0);player.scale.setScalar(1);vel.set(0,0,0);yaw=0;pitch=-.1;
+  for(const a of arms)a.rotation.set(0,0,0);for(const l of legs)l.rotation.set(0,0,0);
   biteSpider.visible=true;biteSpider.position.set(-1.3,1.1,1.2);
-  if(webLine)webLine.visible=false;zip=false;gliding=false;
-  const first=buildings.find(b=>b.userData.x===42&&b.userData.z===0)||buildings.find(b=>b.userData.x===42)||buildings[0];
+  if(webLine)webLine.visible=false;zip=false;gliding=false;gliderRig.visible=false;
+  const first=buildings.find(b=>b.userData.x===24&&b.userData.z===24)||buildings.reduce((best,b)=>Math.hypot(b.userData.x,b.userData.z)<Math.hypot(best.userData.x,best.userData.z)?b:best,buildings[0]);
   const u=first.userData;cutsceneData.wall=first;cutsceneData.wallX=u.x-u.w/2-.8;cutsceneData.wallZ=u.z;cutsceneData.roofY=u.h-.2;
   camera.position.set(3,4.3,7);camera.lookAt(0,2,0);
   csLine('intro-bite','THE BEGINNING','NARRATOR','Peter Parker was just an ordinary person — until one tiny spider changed everything.');
@@ -289,7 +405,20 @@ function skipCutscene(){
   if(endingActive){finishEnding();return}
 }
 function updateIntro(dt){
-  if(!cutsceneData)return;cutsceneData.time+=dt;const t=cutsceneData.time;const w=cutsceneData.wallX,z0=cutsceneData.wallZ,roofY=cutsceneData.roofY;
+  if(!cutsceneData)return;
+  if(cutsceneData.phase==='hero-arrival'){
+    cutsceneData.time+=dt;const at=cutsceneData.time,p=smooth(at/2.55),start=cutsceneData.arrivalStart,anchor=cutsceneData.arrivalAnchor;
+    player.position.set(approach(start.x,0,p),approach(start.y,0,p)+Math.sin(p*Math.PI)*2.5,approach(start.z,0,p));
+    player.rotation.y=approach(-.72,0,p);player.rotation.z=Math.sin(at*5)*.07;
+    arms[0].rotation.set(-.55,0,.48);arms[1].rotation.set(-.55,0,-.48);
+    legs[0].rotation.x=.30+Math.sin(at*5)*.12;legs[1].rotation.x=-.30-Math.sin(at*5)*.12;
+    if(at>1.95){const land=smooth((at-1.95)/.48);player.position.y=approach(player.position.y,0,land);arms[0].rotation.x=approach(-.55,-.2,land);arms[1].rotation.x=approach(-.55,-.2,land);legs[0].rotation.x=approach(legs[0].rotation.x,-.5,land);legs[1].rotation.x=approach(legs[1].rotation.x,-.5,land);player.rotation.z=approach(player.rotation.z,0,land)}
+    if(webLine){webLine.visible=at<2.15;webLine.geometry.setFromPoints([player.position.clone().add(new THREE.Vector3(0,2.4,0)),anchor])}
+    camera.position.lerp(player.position.clone().add(new THREE.Vector3(4,5.5,10)),1-Math.exp(-dt*2.8));camera.lookAt(player.position.clone().add(new THREE.Vector3(0,1.8,0)));
+    if(at>=2.55){if(webLine)webLine.visible=false;beginOriginCutscene()}
+    return;
+  }
+  cutsceneData.time+=dt;const t=cutsceneData.time;const w=cutsceneData.wallX,z0=cutsceneData.wallZ,roofY=cutsceneData.roofY;
   if(t<4){
     csLine('intro-bite','THE BEGINNING','NARRATOR','Peter Parker was just an ordinary person — until one tiny spider changed everything.');
     player.position.set(0,0,0);player.rotation.y=0;
@@ -366,7 +495,7 @@ function makeCrowdPerson(x,z,scale,color,seed){
  const shirt=mat(color,.43,.035),pants=mat(seed%3===0?0x202b3b:seed%3===1?0x363137:0x343d40,.46,.035),skin=mat(seed%4===0?0x9d6a4d:seed%4===1?0xd9ad8e:0xb98064,.35,.025);
  // Lathed torsos give the crowd smooth mannequin anatomy instead of a single capsule.
  // Female silhouettes use a narrower waist with softly rounded chest and hip transitions.
- const maleProfile=[[.16,.72],[.20,.80],[.215,.94],[.18,1.08],[.20,1.24],[.245,1.39],[.29,1.52],[.265,1.63],[.15,1.74],[.10,1.78]];
+ const maleProfile=[[.16,.72],[.19,.80],[.215,.94],[.20,1.08],[.205,1.24],[.255,1.39],[.295,1.52],[.265,1.63],[.15,1.74],[.10,1.78]]; // flat-chested male mannequin silhouette
  const femaleProfile=[[.155,.72],[.205,.78],[.235,.89],[.22,.99],[.165,1.12],[.16,1.24],[.195,1.37],[.235,1.49],[.22,1.59],[.17,1.68],[.125,1.76],[.10,1.78]];
  const profile=(isFemale?femaleProfile:maleProfile).map(([r,y])=>new THREE.Vector2(r,y));
  const body=mesh(new THREE.LatheGeometry(profile,20),shirt,g);
@@ -429,16 +558,19 @@ const endingSequence=[
  {type:'crowd',key:'end-cheer',kicker:'THE CITY CELEBRATES',speaker:'100 FANS',line:'LET’S GOOOOO, SPIDEY!',hold:.35},
  {type:'gwenSpeech',key:'end-gwen',kicker:'LIVE FROM THE CITY',speaker:'GWEN STACY',line:'Spidey is our hero, not a menace!',hold:.3},
  {type:'jonahSpeech',key:'end-jonah',kicker:'BREAKING NEWS',speaker:'J. JONAH JAMESON',line:'No! This Spidey again! He’s damaging properties again!',hold:.3},
+ {type:'crowdAgain',key:'end-cheer-again',kicker:'THE FANS HAVE THEIR HERO',speaker:'100 FANS',line:'LET’S GOOOOO, SPIDEY!',hold:.3},
  {type:'crowdLeaves',duration:4.2},
  {type:'askGwen',key:'end-ask-gwen',kicker:'AFTER THE CELEBRATION',speaker:'SPIDER-MAN',line:'Gwen, can we talk somewhere quiet?',hold:.3},
  {type:'walkPrivate',duration:6.8},
- {type:'privateTalk',key:'end-gwen-quiet',kicker:'SOMEWHERE QUIET',speaker:'GWEN STACY',line:'Sure, Pete. What is it?',hold:.25},
- {type:'privateTalk',key:'end-peter-reveal',kicker:'A SECRET TO SHARE',speaker:'SPIDER-MAN',line:'There’s something I want you to see.',hold:.25},
+ {type:'privateTalk',key:'end-gwen-saved-city',kicker:'A QUIETER MOMENT',speaker:'GWEN STACY',line:'You did it. You saved everyone.',hold:.3},
+ {type:'privateTalk',key:'end-peter-reveal',kicker:'JUST PETER',speaker:'SPIDER-MAN',line:'I don’t need the mask right now.',hold:.3},
  {type:'unmask',duration:1.25},
- {type:'privateTalk',key:'end-gwen-recognizes',kicker:'THE PERSON UNDER THE MASK',speaker:'GWEN STACY',line:'Peter? It’s really you.',hold:.3},
- {type:'kissTen',duration:10}, // Keep this romantic beat for a full 10 seconds.
- {type:'privateTalk',key:'end-peter-have-to-go',kicker:'TIME TO GO',speaker:'PETER',line:'I have to go, Gwen.',hold:.2},
- {type:'kissThree',duration:3}, // Gwen's goodbye kiss lasts 3 seconds.
+ {type:'privateTalk',key:'end-gwen-peter',kicker:'TOGETHER AGAIN',speaker:'GWEN STACY',line:'I’m glad you’re here, Peter.',hold:.3},
+ {type:'roofTransfer',duration:5.2},
+ {type:'privateTalk',key:'end-roof-secret',kicker:'ABOVE THE CITY',speaker:'SPIDER-MAN',line:'There’s one more thing I want you to see.',hold:.3},
+ {type:'endingChoice'}, // Pause here until the player chooses A or B.
+ {type:'suitRemoval',duration:2.8},
+ {type:'kissTen',duration:10}, // One uninterrupted 10-second rooftop kiss with Gwen.
  {type:'endTitle',key:'end-title',kicker:'SPIDER-MAN: CITY CHASE',speaker:'NARRATOR',line:'City saved. Hero forever.',hold:.8},
  {type:'titleHold',duration:2.2}
 ];
@@ -448,6 +580,33 @@ function removePrivatePlaceProps(){
 }
 function addPrivateProp(geo,material,x,y,z,rx=0,ry=0,rz=0){
  const o=mesh(geo,material);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);privatePlaceProps.push(o);return o;
+}
+function clearRooftopProps(){
+ for(const o of rooftopProps){if(o.parent)o.parent.remove(o);if(o.geometry)o.geometry.dispose();if(o.material&&o.material.dispose)o.material.dispose()}
+ rooftopProps=[];
+}
+function addRooftopBox(w,h,d,material,x,y,z){
+ const o=mesh(new THREE.BoxGeometry(w,h,d),material);o.position.set(x,y,z);rooftopProps.push(o);return o;
+}
+function createRooftopSet(roof){
+ clearRooftopProps();
+ if(!roof)return;
+ const u=roof.userData,top=u.h-.2;
+ const parapet=mat(0x697681,.78,.08),roofTrim=mat(0x303b46,.64,.16),ventMat=mat(0x5a646e,.66,.22);
+ const t=.20,h=.62,edgeY=top+h/2;
+ // Low parapets and rooftop ventilation make it visibly read as a building roof, not an empty floor.
+ addRooftopBox(u.w,h,t,parapet,u.x,edgeY,u.z-u.d/2+t/2);
+ addRooftopBox(u.w,h,t,parapet,u.x,edgeY,u.z+u.d/2-t/2);
+ addRooftopBox(t,h,u.d-2*t,parapet,u.x-u.w/2+t/2,edgeY,u.z);
+ addRooftopBox(t,h,u.d-2*t,parapet,u.x+u.w/2-t/2,edgeY,u.z);
+ addRooftopBox(u.w-.5,.12,.22,roofTrim,u.x,top+.06,u.z-u.d/2+.25);
+ // Two small HVAC units are placed toward the far corners, away from the actors' kiss mark.
+ for(const sign of [-1,1]){
+  const v=addRooftopBox(1.5,.85,1.15,ventMat,u.x+sign*(u.w*.30),top+.425,u.z-u.d*.29);
+  addRooftopBox(1.28,.10,.98,roofTrim,v.position.x,top+.88,v.position.z);
+  for(let fin=0;fin<3;fin++)addRooftopBox(.06,.45,.88,roofTrim,v.position.x-.38+fin*.38,top+.43,v.position.z+.02);
+ }
+ const antenna=mesh(new THREE.CylinderGeometry(.035,.06,2.2,7),roofTrim);antenna.position.set(u.x-u.w*.30,top+1.1,u.z+u.d*.25);rooftopProps.push(antenna);
 }
 function createQuietPlace(x,z){
  removePrivatePlaceProps();
@@ -467,8 +626,9 @@ function enterEndingStage(index){
  cutsceneData.endStageIndex=index;cutsceneData.endStageTime=0;cutsceneData.dialogueDone=true;cutsceneData.dialogueFinishedAt=0;
  cutsceneData.maskRemoved=cutsceneData.maskRemoved||false;
  const stage=endingSequence[index];
+ $('endingChoices').style.display='none';
  csLastLine='';
- if(stage.key)csLine(stage.key,stage.kicker,stage.speaker,stage.line);
+ if(stage.key){$('csDialogue').style.opacity='1';csLine(stage.key,stage.kicker,stage.speaker,stage.line)}else if(stage.type==='roofTransfer'){$('csDialogue').style.opacity='0.25'}else if(stage.type==='endingChoice'){$('csDialogue').style.opacity='0.25';$('csSpeaker').textContent='YOUR CHOICE';$('csLine').textContent='Choose how the rooftop story ends.'}else{$('csDialogue').style.opacity='1'};
  if(stage.type==='walkPrivate'){
   if(crowdGroup)crowdGroup.visible=false;
   if(gwenActor&&gwenActor.parent!==scene)scene.attach(gwenActor);
@@ -477,20 +637,70 @@ function enterEndingStage(index){
   player.position.set(0,0,-2.6);player.rotation.set(0,0,0);
   cutsceneData.walkStartPlayer=player.position.clone();
   cutsceneData.walkStartGwen=gwenActor?gwenActor.position.clone():new THREE.Vector3(-2.6,0,4.5);
-  cutsceneData.privateX=0;cutsceneData.privateZ=-3.5;
+  cutsceneData.privateX=0;cutsceneData.privateZ=-3.5;cutsceneData.privateY=0;
   cutsceneData.walkTargetPlayer=new THREE.Vector3(-.72,0,-3.25);
   cutsceneData.walkTargetGwen=new THREE.Vector3(.72,0,-3.65);
   cutsceneData.walkYawPlayer=Math.atan2(cutsceneData.walkTargetPlayer.x-cutsceneData.walkStartPlayer.x,cutsceneData.walkTargetPlayer.z-cutsceneData.walkStartPlayer.z);
   cutsceneData.walkYawGwen=Math.atan2(cutsceneData.walkTargetGwen.x-cutsceneData.walkStartGwen.x,cutsceneData.walkTargetGwen.z-cutsceneData.walkStartGwen.z);
   createQuietPlace(cutsceneData.privateX,cutsceneData.privateZ);
  }
+ if(stage.type==='roofTransfer'){
+  if(crowdGroup)crowdGroup.visible=false;
+  if(gwenActor)gwenActor.visible=true;
+  const roofW=endingRoof?endingRoof.userData.w:18,roofD=endingRoof?endingRoof.userData.d:18;
+  cutsceneData.roofKissX=cutsceneData.roofX;
+  cutsceneData.roofKissY=cutsceneData.roofY;
+  cutsceneData.roofKissZ=cutsceneData.roofZ+Math.min(4.2,roofD*.27);
+  cutsceneData.roofStartPlayer=player.position.clone();
+  cutsceneData.roofStartGwen=gwenActor?gwenActor.position.clone():new THREE.Vector3(0,0,0);
+  cutsceneData.roofTargetPlayer=new THREE.Vector3(cutsceneData.roofKissX-.62,cutsceneData.roofKissY,cutsceneData.roofKissZ);
+  cutsceneData.roofTargetGwen=new THREE.Vector3(cutsceneData.roofKissX+.62,cutsceneData.roofKissY,cutsceneData.roofKissZ);
+  cutsceneData.suitRemoved=false;
+  player.scale.setScalar(.74);setSuitMode(true);setMaskMode(false);
+  if(!webLine){webLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xe8fbff}));scene.add(webLine)}
+  webLine.visible=true;
+ }
+ if(stage.type==='walkAway'){
+  if(crowdGroup)crowdGroup.visible=false;
+  setSuitMode(true);setMaskMode(true);player.scale.setScalar(.74);
+  cutsceneData.walkAwayStart=player.position.clone();
+  cutsceneData.walkAwayTarget=new THREE.Vector3(cutsceneData.roofKissX+7,cutsceneData.roofKissY,cutsceneData.roofKissZ-2.5);
+  if(webLine)webLine.visible=false;
+ }
+ if(stage.type==='swingAway'){
+  if(crowdGroup)crowdGroup.visible=false;
+  setSuitMode(true);setMaskMode(true);player.scale.setScalar(.74);
+  cutsceneData.patrolSwingStart=player.position.clone();
+  const ru=endingRoof.userData;
+  cutsceneData.patrolSwingAnchor=new THREE.Vector3(ru.x+ru.w*.5+1,ru.h+3,cutsceneData.roofKissZ+1.5);
+  cutsceneData.patrolSwingDuration=stage.duration||4.0;
+  cutsceneData.patrolSwingEnd=null;
+  if(!webLine){webLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xe8fbff}));scene.add(webLine)}
+  webLine.visible=true;
+ }
+ if(stage.type==='suitRemoval'){
+  if(crowdGroup)crowdGroup.visible=false;
+  player.position.set(cutsceneData.roofKissX-.72,cutsceneData.roofKissY,cutsceneData.roofKissZ);
+  if(gwenActor)gwenActor.position.set(cutsceneData.roofKissX+.72,cutsceneData.roofKissY,cutsceneData.roofKissZ);
+  player.rotation.y=Math.PI/2;if(gwenActor)gwenActor.rotation.y=-Math.PI/2;
+  player.scale.setScalar(1);cutsceneData.suitRemoved=false;
+ }
 }
 function startEnding(){
+ // Finale sequence: 100 fans, Gwen's speech, Jonah's complaint, then the MJ-style reunion shot with Gwen.
  endingActive=true;introActive=false;
  cutsceneData={time:0,endStageIndex:0,endStageTime:0,dialogueDone:true,dialogueFinishedAt:0,voiceToken:0,maskRemoved:false};csLastLine='';csShow();
  if(webLine)webLine.visible=false;zip=false;gliding=false;clearEnemies();setSuitMode(true);setMaskMode(true);player.scale.setScalar(1);regen();
- const roof=buildings.reduce((best,b)=>Math.hypot(b.userData.x,b.userData.z)<Math.hypot(best.userData.x,best.userData.z)?b:best,buildings[0]);endingRoof=roof;
+ const roofCandidates=buildings.filter(b=>Math.abs(b.userData.x)<=90&&Math.abs(b.userData.z)<=90&&b.userData.h>=35);
+ roofCandidates.sort((a,b)=>{
+  const ua=a.userData,ub=b.userData;
+  const sa=Math.hypot(ua.x,ua.z)-Math.min(ua.h,70)*.13;
+  const sb=Math.hypot(ub.x,ub.z)-Math.min(ub.h,70)*.13;
+  return sa-sb;
+ });
+ const roof=roofCandidates[0]||buildings.reduce((best,b)=>Math.hypot(b.userData.x,b.userData.z)<Math.hypot(best.userData.x,best.userData.z)?b:best,buildings[0]);endingRoof=roof;
  const u=roof.userData,top=u.h-.2;cutsceneData.roofX=u.x;cutsceneData.roofZ=u.z;cutsceneData.roofY=top;
+ createRooftopSet(roof);
  createCrowdScene();player.position.set(0,0,-2.6);player.rotation.set(0,0,0);vel.set(0,0,0);
  if(mjCutsceneActor){scene.remove(mjCutsceneActor);mjCutsceneActor=null}
  $('finish').style.display='none';camera.position.set(0,9,-13);camera.lookAt(0,2,11);
@@ -502,19 +712,54 @@ function finishEnding(){
  if('speechSynthesis' in window){try{speechSynthesis.cancel()}catch(e){}}
  csHide();
  if(mjCutsceneActor){scene.remove(mjCutsceneActor);mjCutsceneActor=null}
- if(gwenActor){if(gwenActor.parent)gwenActor.parent.remove(gwenActor);scene.remove(gwenActor);gwenActor=null}
+ // Keep Gwen beside Peter for the post-story rooftop finish screen; only clear the crowd and Jonah.
  if(crowdGroup){scene.remove(crowdGroup);crowdGroup=null;crowdActors=[];jonahActor=null;micProp=null}
+ if(webLine)webLine.visible=false;
  removePrivatePlaceProps();
- player.scale.setScalar(1);setSuitMode(true);setMaskMode(true);
- player.position.set(0,0,-6);player.rotation.set(0,0,0);
+ const fx=cutsceneData&&Number.isFinite(cutsceneData.roofKissX)?cutsceneData.roofKissX:0;
+ const fy=cutsceneData&&Number.isFinite(cutsceneData.roofKissY)?cutsceneData.roofKissY:0;
+ const fz=cutsceneData&&Number.isFinite(cutsceneData.roofKissZ)?cutsceneData.roofKissZ:-6;
+ player.scale.setScalar(cutsceneData&&cutsceneData.choice==='kiss'?.64:.74);
+ if(cutsceneData&&cutsceneData.choice==='go'){setSuitMode(true);setMaskMode(true)}else{setSuitRemovedMode();setMaskMode(false)}
+ if(cutsceneData&&cutsceneData.choice==='go'&&cutsceneData.patrolSwingEnd){player.position.copy(cutsceneData.patrolSwingEnd);player.rotation.set(-.16,Math.PI/2,-.18)}
+ else{player.position.set(fx-.25,fy,fz);player.rotation.set(0,Math.PI/2,cutsceneData&&cutsceneData.choice==='kiss' ? -.06 : 0)}
+ if(gwenActor){gwenActor.visible=true;gwenActor.position.set(fx+.25,fy,fz);gwenActor.rotation.set(0,-Math.PI/2,0);}
  cutsceneData=null;completeLevel();$('msg').innerHTML='';showFinish();
 }
 function resetKissPose(){
- player.rotation.set(0,Math.PI/2,0);player.position.set(cutsceneData.privateX-.32,0,cutsceneData.privateZ);
- if(gwenActor){gwenActor.rotation.set(0,-Math.PI/2,0);gwenActor.position.set(cutsceneData.privateX+.32,0,cutsceneData.privateZ)}
- player.scale.setScalar(.62);setMaskMode(false);
- head.rotation.set(0,0,0);arms[0].rotation.set(0,0,-.12);arms[1].rotation.set(0,0,.12);
- if(gwenActor&&gwenActor.userData){gwenActor.userData.head.rotation.set(0,0,0);gwenActor.userData.arms[0].rotation.set(0,0,-.10);gwenActor.userData.arms[1].rotation.set(0,0,.10)}
+ const x=cutsceneData.roofKissX??cutsceneData.privateX;
+ const y=cutsceneData.roofKissY??cutsceneData.privateY??0;
+ const z=cutsceneData.roofKissZ??cutsceneData.privateZ;
+ // Put them close enough that their torsos meet and their faces visibly touch.
+ // They face each other: Peter faces +X; Gwen faces -X.
+ player.position.set(x-.18,y,z);
+ player.rotation.set(0,Math.PI/2,-.045);
+ player.scale.setScalar(.64);
+ setSuitRemovedMode();
+ setMaskMode(false);
+ // Bring Peter's face slightly forward and lean it toward Gwen.
+ head.position.set(0,3.02,.02);
+ head.rotation.set(.035,0,-.055);
+ // His arms come forward around Gwen instead of only waving beside his body.
+ arms[0].position.set(-.39,2.00,.13);
+ arms[1].position.set(.39,2.00,.13);
+ arms[0].rotation.set(.28,0,-.24);
+ arms[1].rotation.set(.28,0,.24);
+ if(gwenActor){
+  gwenActor.visible=true;
+  gwenActor.position.set(x+.18,y,z);
+  gwenActor.rotation.set(0,-Math.PI/2,.045);
+  gwenActor.scale.setScalar(.95);
+  if(gwenActor.userData){
+   // Gwen's head and torso are separate mannequin meshes, so move the head forward as well.
+   gwenActor.userData.head.position.set(0,1.93,.02);
+   gwenActor.userData.head.rotation.set(.035,0,.055);
+   gwenActor.userData.arms[0].position.set(-.265,1.34,.13);
+   gwenActor.userData.arms[1].position.set(.265,1.34,.13);
+   gwenActor.userData.arms[0].rotation.set(.28,0,-.18);
+   gwenActor.userData.arms[1].rotation.set(.28,0,.18);
+  }
+ }
 }
 function animateEndingWalk(t){
  const gait=t*6.8;
@@ -534,12 +779,23 @@ function updateEnding(dt){
  const d=cutsceneData,stage=endingSequence[d.endStageIndex],t=d.endStageTime;
  if(!stage){finishEnding();return}
  updateCrowd(dt,d.time);
- const privateTypes=['privateTalk','unmask','kissTen','kissThree','endTitle','titleHold'];
- if(stage.type==='crowd'||stage.type==='gwenSpeech'||stage.type==='jonahSpeech'||stage.type==='askGwen'){
+ if(stage.type==='endingChoice'){
+  if(crowdGroup)crowdGroup.visible=false;
+  const px=d.roofKissX??0,py=d.roofKissY??0,pz=d.roofKissZ??0;
+  player.position.set(px-.18,py,pz);player.rotation.set(0,Math.PI/2,0);player.scale.setScalar(.74);setSuitMode(true);setMaskMode(false);
+  if(gwenActor){gwenActor.visible=true;gwenActor.position.set(px+.18,py,pz);gwenActor.rotation.set(0,-Math.PI/2,0)}
+  if(webLine)webLine.visible=false;
+  $('endingChoices').style.display='flex';
+  camera.position.lerp(new THREE.Vector3(px+3.6,py+3.0,pz+6.3),1-Math.exp(-dt*2.6));camera.lookAt(px,py+1.45,pz);
+  return; // Wait for the player's choice; do not advance on a timer.
+ }
+ $('endingChoices').style.display='none';
+ const privateTypes=['privateTalk','unmask','kissTen','endTitle','titleHold'];
+ if(stage.type==='crowd'||stage.type==='crowdAgain'||stage.type==='gwenSpeech'||stage.type==='jonahSpeech'||stage.type==='askGwen'){
   if(crowdGroup)crowdGroup.visible=true;
   player.position.set(0,0,-2.6);player.scale.setScalar(1);player.rotation.y=stage.type==='askGwen'?-0.35:0;
   setSuitMode(true);setMaskMode(true);
-  if(stage.type==='crowd'){
+  if(stage.type==='crowd'||stage.type==='crowdAgain'){
    camera.position.lerp(new THREE.Vector3(0,9,-13),1-Math.exp(-dt*1.8));camera.lookAt(0,2,11);
   }else if(stage.type==='gwenSpeech'){
    camera.position.lerp(new THREE.Vector3(-5.2,3.5,.5),1-Math.exp(-dt*3));camera.lookAt(-2.4,1.5,4.6);
@@ -589,45 +845,120 @@ function updateEnding(dt){
   player.position.lerpVectors(d.walkStartPlayer,d.walkTargetPlayer,p);
   if(gwenActor)gwenActor.position.lerpVectors(d.walkStartGwen,d.walkTargetGwen,p);
   player.rotation.y=d.walkYawPlayer; if(gwenActor)gwenActor.rotation.y=d.walkYawGwen;
-  player.scale.setScalar(approach(1,.62,smooth(t/.85)));
+  player.scale.setScalar(.74);
   animateEndingWalk(t);
   const center=player.position.clone().lerp(gwenActor?gwenActor.position:player.position,.5);
-  camera.position.lerp(center.clone().add(new THREE.Vector3(5,4.7,9)),1-Math.exp(-dt*2.2));camera.lookAt(center.clone().add(new THREE.Vector3(0,1.25,0)));
- }else if(privateTypes.includes(stage.type)){
+  camera.position.lerp(center.clone().add(new THREE.Vector3(3.8,3.2,6.4)),1-Math.exp(-dt*2.6));camera.lookAt(center.clone().add(new THREE.Vector3(0,1.35,0)));
+ }else if(stage.type==='roofTransfer'){
   if(crowdGroup)crowdGroup.visible=false;
-  const px=d.privateX??0,pz=d.privateZ??-6;
-  player.scale.setScalar(.62);
-  if(stage.type==='unmask'){
-   player.position.set(px-.58,0,pz);player.rotation.y=Math.PI/2;
-   if(gwenActor){gwenActor.position.set(px+.58,0,pz);gwenActor.rotation.y=-Math.PI/2;}
+  if(gwenActor)gwenActor.visible=true;
+  const p=smooth(t/stage.duration),startP=d.roofStartPlayer,startG=d.roofStartGwen,targetP=d.roofTargetPlayer,targetG=d.roofTargetGwen;
+  const lift=Math.sin(p*Math.PI)*Math.max(4,Math.min(10,(d.roofKissY||20)*.12));
+  player.position.set(approach(startP.x,targetP.x,p),approach(startP.y,targetP.y,p)+lift,approach(startP.z,targetP.z,p));
+  if(gwenActor)gwenActor.position.set(approach(startG.x,targetG.x,p),approach(startG.y,targetG.y,p)+lift,approach(startG.z,targetG.z,p));
+  player.rotation.y=Math.atan2(targetP.x-startP.x,targetP.z-startP.z);if(gwenActor)gwenActor.rotation.y=player.rotation.y+Math.PI;
+  player.scale.setScalar(.74);setSuitMode(true);setMaskMode(false);
+  const hand=player.position.clone().add(new THREE.Vector3(.42,2.0,.08));
+  const anchor=new THREE.Vector3(d.roofKissX,d.roofKissY+2,d.roofKissZ+1.4);
+  if(webLine){webLine.visible=true;webLine.geometry.setFromPoints([hand,anchor]);}
+  const center=player.position.clone().lerp(gwenActor?gwenActor.position:player.position,.5);
+  camera.position.lerp(center.clone().add(new THREE.Vector3(6.5,4.8,9)),1-Math.exp(-dt*2.0));camera.lookAt(center.clone().add(new THREE.Vector3(0,1.5,0)));
+ }else if(privateTypes.includes(stage.type)||stage.type==='suitRemoval'||stage.type==='walkAway'||stage.type==='swingAway'){
+  if(crowdGroup)crowdGroup.visible=false;
+  const px=d.roofKissX??d.privateX??0,py=d.roofKissY??d.privateY??0,pz=d.roofKissZ??d.privateZ??-6;
+  player.scale.setScalar((stage.type==='kissTen'||stage.type==='endTitle'||stage.type==='titleHold') ? .74 : .74);
+  if(stage.type==='privateTalk'){
+   // Keep the red-and-blue suit on through Peter's face reveal and rooftop arrival.
+   player.position.set(px-.62,py,pz);player.rotation.set(0,Math.PI/2,0);player.scale.setScalar(.74);setSuitMode(true);
+   const unmasked=!!d.maskRemoved||stage.key==='end-gwen-peter'||stage.key==='end-roof-secret';
+   setMaskMode(!unmasked);
+   if(gwenActor){gwenActor.visible=true;gwenActor.position.set(px+.62,py,pz);gwenActor.rotation.set(0,-Math.PI/2,0)}
+   camera.position.lerp(new THREE.Vector3(px+3.6,py+3.0,pz+6.0),1-Math.exp(-dt*2.5));camera.lookAt(px,py+1.45,pz);
+  }else if(stage.type==='unmask'){
+   player.position.set(px-.62,py,pz);player.rotation.y=Math.PI/2;player.scale.setScalar(.74);setSuitMode(true);
+   if(gwenActor){gwenActor.position.set(px+.62,py,pz);gwenActor.rotation.y=-Math.PI/2;}
    const p=smooth(t/stage.duration);
    arms[0].rotation.x=approach(0,-1.1,p);arms[1].rotation.x=approach(0,-.85,p);
    if(p>.68&&!d.maskRemoved){setMaskMode(false);d.maskRemoved=true;}
-   camera.position.lerp(new THREE.Vector3(px+3.8,3.4,pz+6.8),1-Math.exp(-dt*2.8));camera.lookAt(px,1.65,pz);
+   camera.position.lerp(new THREE.Vector3(px+3.8,py+3.4,pz+6.8),1-Math.exp(-dt*2.8));camera.lookAt(px,py+1.65,pz);
+  }else if(stage.type==='suitRemoval'){
+   player.position.set(px-.18,py,pz);player.rotation.y=Math.PI/2;player.scale.setScalar(.74);setSuitMode(true);setMaskMode(false);
+   if(gwenActor){gwenActor.position.set(px+.18,py,pz);gwenActor.rotation.y=-Math.PI/2;}
+   const p=smooth(t/stage.duration);
+   // He changes from the red/blue suit into casual clothes; his scale eases to Gwen's height.
+   arms[0].rotation.x=approach(-.08,-.62,Math.sin(p*Math.PI));
+   arms[1].rotation.x=approach(-.08,-.52,Math.sin(p*Math.PI));
+   arms[0].rotation.z=approach(0,-.28,Math.sin(p*Math.PI));
+   arms[1].rotation.z=approach(0,.28,Math.sin(p*Math.PI));
+   player.scale.setScalar(approach(.74,.64,p));
+   if(p>.48&&!d.suitRemoved){setSuitRemovedMode();setMaskMode(false);d.suitRemoved=true;}
+   camera.position.lerp(new THREE.Vector3(px+4.2,py+3.5,pz+7.5),1-Math.exp(-dt*2.5));camera.lookAt(px,py+1.3,pz);
   }else if(stage.type==='kissTen'){
    resetKissPose();
-   const sway=Math.sin(t*1.35)*.012;
-   player.rotation.z=.045+sway;gwenActor.rotation.z=-.045-sway;
-   head.rotation.x=.035;
-   arms[0].rotation.x=-.42;arms[1].rotation.x=-.36;
-   gwenActor.userData.arms[0].rotation.x=-.4;gwenActor.userData.arms[1].rotation.x=-.36;
-   gwenActor.userData.head.rotation.x=.025;
-   camera.position.lerp(new THREE.Vector3(px+2.5,3.1,pz+6.6),1-Math.exp(-dt*2.4));camera.lookAt(px,1.55,pz);
+   const sway=Math.sin(t*1.15)*.006;
+   // Keep their heads in contact for the whole 10-second kiss and make the embrace visible.
+   player.rotation.z=-.045-sway;
+   gwenActor.rotation.z=.045+sway;
+   head.rotation.x=.035;head.rotation.z=-.055-sway;
+   head.position.z=.02;
+   arms[0].position.set(-.34,1.98,.19);arms[1].position.set(.34,1.98,.19);
+   arms[0].rotation.set(.42,0,-.30);arms[1].rotation.set(.42,0,.30);
+   gwenActor.userData.head.position.set(0,1.93,.02);
+   gwenActor.userData.head.rotation.x=.035;
+   gwenActor.userData.head.rotation.z=.055+sway;
+   gwenActor.userData.arms[0].position.set(-.24,1.36,.18);
+   gwenActor.userData.arms[1].position.set(.24,1.36,.18);
+   gwenActor.userData.arms[0].rotation.set(.42,0,-.24);
+   gwenActor.userData.arms[1].rotation.set(.42,0,.24);
+   // Slightly lower, closer camera: both bodies and the touching heads stay in frame.
+   camera.position.lerp(new THREE.Vector3(px+2.0,py+2.25,pz+4.6),1-Math.exp(-dt*3.0));
+   camera.lookAt(px,py+1.72,pz);
   }else if(stage.type==='kissThree'){
    resetKissPose();
-   const sway=Math.sin(t*2.8)*.02;
-   gwenActor.rotation.z=-.075-sway;player.rotation.z=.04+sway;
-   gwenActor.userData.arms[0].rotation.x=-.52;gwenActor.userData.arms[1].rotation.x=-.43;
+   const sway=Math.sin(t*2.0)*.008;
+   gwenActor.rotation.z=.045+sway;player.rotation.z=-.045-sway;
+   gwenActor.userData.arms[0].position.z=.18;gwenActor.userData.arms[1].position.z=.18;
+   gwenActor.userData.arms[0].rotation.set(.42,0,-.24);gwenActor.userData.arms[1].rotation.set(.42,0,.24);
    player.rotation.x=-.015;
-   camera.position.lerp(new THREE.Vector3(px+2.2,3.0,pz+6.2),1-Math.exp(-dt*3));camera.lookAt(px,1.55,pz);
+   camera.position.lerp(new THREE.Vector3(px+2.0,py+2.25,pz+4.6),1-Math.exp(-dt*3));camera.lookAt(px,py+1.72,pz);
   }else if(stage.type==='endTitle'){
-   player.position.set(px-.85,0,pz);player.rotation.set(0,Math.PI/2,0);setMaskMode(false);
-   gwenActor.position.set(px+.85,0,pz);gwenActor.rotation.set(0,-Math.PI/2,0);
-   camera.position.lerp(new THREE.Vector3(px+2,4,pz+8),1-Math.exp(-dt*2));camera.lookAt(px,1.6,pz);
-  }else{
-   player.position.set(px-.85,0,pz);player.rotation.set(0,Math.PI/2,0);
-   if(gwenActor){gwenActor.position.set(px+.85,0,pz);gwenActor.rotation.set(0,-Math.PI/2,0)}
-   camera.lookAt(px,1.6,pz);
+   const titlePos=(d.choice==='go'&&d.patrolSwingEnd)?d.patrolSwingEnd:new THREE.Vector3(px-.25,py,pz);
+   player.position.copy(titlePos);player.rotation.set(0,Math.PI/2,(d.choice==='go'&&d.patrolSwingEnd)?-.20:0);player.scale.setScalar(d.choice==='kiss'?.64:.74);
+   if(d.choice==='kiss'){setSuitRemovedMode();setMaskMode(false)}else{setSuitMode(true);setMaskMode(true)}
+   if(gwenActor){gwenActor.position.set(px+.25,py,pz);gwenActor.rotation.set(0,-Math.PI/2,0);}
+   if(d.choice==='go'&&d.patrolSwingEnd&&webLine)webLine.visible=true;
+   camera.position.lerp(new THREE.Vector3(titlePos.x+2.7,titlePos.y+3.2,titlePos.z+7),1-Math.exp(-dt*2));camera.lookAt(titlePos.clone().add(new THREE.Vector3(0,1.25,0)));
+  }else if(stage.type==='titleHold'){
+   const titlePos=(d.choice==='go'&&d.patrolSwingEnd)?d.patrolSwingEnd:new THREE.Vector3(px-.25,py,pz);
+   player.position.copy(titlePos);player.rotation.set(0,Math.PI/2,(d.choice==='go'&&d.patrolSwingEnd)?-.20:0);player.scale.setScalar(d.choice==='kiss'?.64:.74);
+   if(d.choice==='kiss'){setSuitRemovedMode();setMaskMode(false)}else{setSuitMode(true);setMaskMode(true)}
+   if(gwenActor){gwenActor.position.set(px+.25,py,pz);gwenActor.rotation.set(0,-Math.PI/2,0)}
+   if(d.choice==='go'&&d.patrolSwingEnd&&webLine)webLine.visible=true;
+   camera.position.lerp(new THREE.Vector3(titlePos.x+2.7,titlePos.y+3.2,titlePos.z+7),1-Math.exp(-dt*2));camera.lookAt(titlePos.clone().add(new THREE.Vector3(0,1.25,0)));
+  }else if(stage.type==='walkAway'){
+   const p=smooth(t/stage.duration);
+   player.position.lerpVectors(d.walkAwayStart,d.walkAwayTarget,p);player.scale.setScalar(.74);setSuitMode(true);setMaskMode(true);
+   player.rotation.y=Math.atan2(d.walkAwayTarget.x-d.walkAwayStart.x,d.walkAwayTarget.z-d.walkAwayStart.z);
+   if(gwenActor){gwenActor.position.set(d.roofKissX+.25,d.roofKissY,d.roofKissZ);gwenActor.rotation.y=-Math.PI/2}
+   animateEndingWalk(t);
+   const center=player.position.clone().lerp(gwenActor?gwenActor.position:player.position,.35);
+   camera.position.lerp(center.clone().add(new THREE.Vector3(5,3.2,7)),1-Math.exp(-dt*2));camera.lookAt(center.clone().add(new THREE.Vector3(0,1.2,0)));
+  }else if(stage.type==='swingAway'){
+   const p=Math.max(0,Math.min(1,t/stage.duration));
+   const start=d.patrolSwingStart,anchor=d.patrolSwingAnchor;
+   // Fast cinematic web arc: lift off the rooftop, sweep forward, then hold an airborne hero pose.
+   const swingAngle=-0.20+1.00*smooth(p);
+   const forward=smooth(p);
+   const lift=Math.sin(Math.PI*p)*7.0+1.8*p;
+   player.position.set(start.x+7.5*forward, start.y+lift, start.z-15.0*forward);
+   player.rotation.set(-.18*Math.sin(p*Math.PI),Math.PI*.5+.18*Math.sin(p*Math.PI),-.22*Math.sin(p*Math.PI));
+   player.scale.setScalar(.74);setSuitMode(true);setMaskMode(true);
+   arms[0].rotation.set(-.75,0,-.45);arms[1].rotation.set(-.75,0,.45);
+   legs[0].rotation.x=.4;legs[1].rotation.x=-.4;
+   const hand=player.position.clone().add(new THREE.Vector3(0,1.8,.05));
+   if(webLine){webLine.visible=t<stage.duration+.8;webLine.geometry.setFromPoints([hand,anchor]);}
+   d.patrolSwingEnd=player.position.clone();
+   camera.position.lerp(player.position.clone().add(new THREE.Vector3(5,4.2,9)),1-Math.exp(-dt*2.3));camera.lookAt(player.position.clone().add(new THREE.Vector3(0,1.4,0)));
   }
  }
  // Advance only after the subtitle voice finishes. Actions (crowd departure, walk, unmask, and kisses) then play to completion.
@@ -639,12 +970,29 @@ function updateEnding(dt){
  if(next>=endingSequence.length){finishEnding();return}
  enterEndingStage(next);
 }
+function chooseEnding(choice){
+ if(!endingActive||!cutsceneData)return;
+ const current=endingSequence[cutsceneData.endStageIndex];
+ if(!current||current.type!=='endingChoice')return;
+ cutsceneData.choice=choice;
+ $('endingChoices').style.display='none';
+ if(choice==='go'){
+  // Peter gives his goodbye, fires a web and swings away into the city instead of kissing.
+  endingSequence.splice(cutsceneData.endStageIndex+1,2,
+   {type:'privateTalk',key:'end-goodbye-option',kicker:'BACK TO THE CITY',speaker:'SPIDER-MAN',line:'I should get back out there. This city still needs me.',hold:.35},
+   {type:'swingAway',duration:4.0}
+  );
+ }
+ enterEndingStage(cutsceneData.endStageIndex+1);
+}
+$('choiceKiss').addEventListener('click',()=>chooseEnding('kiss'));
+$('choiceGo').addEventListener('click',()=>chooseEnding('go'));
 $('skipCutscene').addEventListener('click',skipCutscene);
-function startLevel(n){level=n;stage=1;wave=0;clearEnemies();regen();wallClimbing=false;wallBuilding=null;wallNormal=null;doubleJumpUsed=false;backflipTime=0;if(webLine)webLine.visible=false;swingAttached=false;webHeld=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;if(n===1){say('WELCOME TO THE CITY','Your suit is ready. Explore the city, then press E when you are ready for your first mission.',7);stage=0;
+function startLevel(n){level=n;stage=1;wave=0;clearEnemies();regen();wallClimbing=false;wallBuilding=null;wallNormal=null;doubleJumpUsed=false;backflipTime=0;gliding=false;gliderRig.visible=false;if(webLine)webLine.visible=false;swingAttached=false;webHeld=false;webAnchor=null;webAnchorBuilding=null;ropeLength=0;if(n===1){say('WELCOME TO THE CITY','Your suit is ready. Explore the city, then press E when you are ready for your first mission.',7);stage=0;
 player.position.set(0,0,0);yaw=0;pitch=-.1;setSuitMode(true)}
 else if(n===2){say('LEVEL 2 · STREET TROUBLE','Defeat the bandits. Use F or left-click to fight.',4);spawnBandits(6)}
 else if(n===3){say('LEVEL 3 · BANK ROBBERY','Bandits: “We need revenge!” SPIDER-MAN: “Oh, really? I hate this day.”',5);spawnBandits(8)}
-else if(n===4){mj={position:new THREE.Vector3(0,0,-90)};const markerMat=mat(0xffcf75);let m=mesh(new THREE.CylinderGeometry(.25,.25,3,10),markerMat);m.position.set(0,1.5,-90);say('LEVEL 4 · SAVE MJ','Green Goblin has taken MJ! Chase him through the city. Press G to deploy your glider, then hold Space while falling.',6);greenGoblin=makePerson('greenGoblin',0,-30,180);greenGoblin.userData.flee=true;missionTimer=0}
+else if(n===4){mj={position:new THREE.Vector3(0,0,-90)};const markerMat=mat(0xffcf75);let m=mesh(new THREE.CylinderGeometry(.25,.25,3,10),markerMat);m.position.set(0,1.5,-90);say('LEVEL 4 · GWEN’S PHONE CALL','Come fast, Spider-Man is going to arrive. We have to make a speech for Spider.',9.5);speakGwenPhoneCall();greenGoblin=makePerson('greenGoblin',0,-30,180);greenGoblin.userData.flee=true;missionTimer=0}
 else if(n>=5&&n<=8){say('LEVEL '+n+' · ROOFTOP PURSUIT','Chase Green Goblin! Clear the bandits blocking your path.',3.5);if(!greenGoblin){greenGoblin=makePerson('greenGoblin',0,-110-(n-5)*18,180);greenGoblin.userData.flee=true}spawnBandits(n-3)}
 else if(n===9){say('LEVEL 9 · FINAL CHASE','Catch Green Goblin before the 120-second timer runs out!',4);missionTimer=120;greenGoblin=makePerson('greenGoblin',0,-125,180);greenGoblin.userData.flee=true}
 else if(n===10){say('LEVEL 10 · FOUR-WAVE SHOWDOWN','Defeat all four villains in order. Health restores after every wave.',4);wave=1;startBossWave('greenGoblin')}
@@ -741,20 +1089,29 @@ function updatePlayerAnimation(dt,walkingSpeed,sprinting){
  const moving=Math.min(1,walkingSpeed/(sprinting?9:5));
  const stride=(sprinting?.82:.5)*moving;
  const swingPhase=Math.sin(gaitTime);
+ const glidingPose=gliding&&level>=4&&player.position.y>1;
  let armLeft=swingPhase*stride,armRight=-swingPhase*stride;
  let legLeft=-swingPhase*stride,legRight=swingPhase*stride;
- torso.rotation.z=0;torso.rotation.x=0;pelvis.rotation.z=0;
- if(swingAttached){armLeft=-1.35+Math.sin(gaitTime*1.7)*.18;armRight=-1.35-Math.sin(gaitTime*1.7)*.18;legLeft=.36+Math.sin(gaitTime*2)*.31;legRight=.36-Math.sin(gaitTime*2)*.31;torso.rotation.x=-.28;pelvis.rotation.x=.14;}
- if(wallClimbing){const c=Math.sin(gaitTime*1.5)*.55;armLeft=-.75+c;armRight=-.75-c;legLeft=.55-c*.7;legRight=.55+c*.7;torso.rotation.x=-.16;}
- if(gliding&&level>=4&&player.position.y>1){armLeft=-1.35+Math.sin(gaitTime)*.04;armRight=1.35-Math.sin(gaitTime)*.04;legLeft=.8;legRight=.8;torso.rotation.x=Math.PI/2;pelvis.rotation.x=0;}
- else if(!ground&&!swingAttached&&!wallClimbing&&player.position.y>1){torso.rotation.x=.28;armLeft=-.9;armRight=.9;legLeft=.35;legRight=-.35;}
+ let armZLeft=-.08,armZRight=.08,legZLeft=0,legZRight=0;
+ torso.rotation.z=0;torso.rotation.x=0;pelvis.rotation.z=0;pelvis.rotation.x=0;head.rotation.x=0;
+ if(swingAttached){armLeft=-1.35+Math.sin(gaitTime*1.7)*.18;armRight=-1.35-Math.sin(gaitTime*1.7)*.18;legLeft=.36+Math.sin(gaitTime*2)*.31;legRight=.36-Math.sin(gaitTime*2)*.31;armZLeft=.55;armZRight=-.55;torso.rotation.x=-.18;pelvis.rotation.x=.14;}
+ if(wallClimbing){const c=Math.sin(gaitTime*1.5)*.55;armLeft=-.75+c;armRight=-.75-c;legLeft=.55-c*.7;legRight=.55+c*.7;armZLeft=-.18;armZRight=.18;torso.rotation.x=-.16;}
+ if(glidingPose){
+  // A prone, arms-out dive with web membranes stretched between wrists, torso and hips.
+  armLeft=-.15+Math.sin(gaitTime)*.025;armRight=-.15-Math.sin(gaitTime)*.025;
+  armZLeft=1.22;armZRight=-1.22;
+  legLeft=.16;legRight=-.16;legZLeft=.30;legZRight=-.30;
+  torso.rotation.x=.12;pelvis.rotation.x=-.10;head.rotation.x=.12;
+ }else if(!ground&&!swingAttached&&!wallClimbing){torso.rotation.x=.28;armLeft=-.9;armRight=.9;legLeft=.35;legRight=-.35;}
  if(punchAnim>0){punchAnim=Math.max(0,punchAnim-dt);const p=1-punchAnim/.34;const strike=Math.sin(Math.min(1,p*1.45)*Math.PI*.5);if(punchSide===0)armLeft=-1.9*strike;else armRight=-1.9*strike;torso.rotation.y=(punchSide===0?.12:-.12)*strike;}
- arms[0].rotation.x=armLeft;arms[1].rotation.x=armRight;
- legs[0].rotation.x=legLeft;legs[1].rotation.x=legRight;
- const bob=(walkingSpeed>.25&&!wallClimbing&&!swingAttached)?Math.abs(Math.sin(gaitTime*2))*(sprinting?.10:.055):0;
- torso.position.y=2.15+bob;pelvis.position.y=1.45+bob*.6;head.position.y=3.05+bob*.5;
+ arms[0].rotation.x=armLeft;arms[1].rotation.x=armRight;arms[0].rotation.z=armZLeft;arms[1].rotation.z=armZRight;
+ legs[0].rotation.x=legLeft;legs[1].rotation.x=legRight;legs[0].rotation.z=legZLeft;legs[1].rotation.z=legZRight;
+ gliderRig.visible=glidingPose;
+ const bob=(walkingSpeed>.25&&!wallClimbing&&!swingAttached&&!glidingPose)?Math.abs(Math.sin(gaitTime*2))*(sprinting?.10:.055):0;
+ // The torso geometry is centered around torsoPivotY, so animate only a small bob.
+ torso.position.y=torsoPivotY+bob;pelvis.position.y=1.45+bob*.6;head.position.y=3.05+bob*.5;
  if(backflipTime>0){backflipTime=Math.max(0,backflipTime-dt);const progress=1-backflipTime/.68;player.rotation.x=Math.PI*2*progress;}
- else player.rotation.x=0;
+ else player.rotation.x=glidingPose?Math.PI/2:0;
 }
 function throwBomb(e){let m=mesh(new THREE.SphereGeometry(.38,12,8),mat(0x40392e,.3,.25));m.material.emissive=new THREE.Color(0xff501c);m.material.emissiveIntensity=.8;m.position.copy(e.position).add(new THREE.Vector3(0,2,0));const target=player.position.clone().add(new THREE.Vector3(0,0,0));bombs.push({mesh:m,target,life:3,hit:false});}
 function hurt(amount){if(invuln>0)return;health-=amount;invuln=.7;damageQuiet=0;if(health<=0){health=300;player.position.set(0,0,0);vel.set(0,0,0);say('KNOCKED DOWN','You recover and can keep fighting.',2)}}
